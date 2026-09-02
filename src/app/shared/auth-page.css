@@ -1,0 +1,12 @@
+:host {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background:
+    linear-gradient(90deg, var(--black) 0 22%, #ffffff 22% 44%, var(--green) 44% 67%, var(--red) 67% 100%) top / 100% 7px no-repeat,
+    linear-gradient(135deg, rgba(0, 122, 61, 0.08), rgba(206, 17, 38, 0.04) 42%, transparent 42%),
+    repeating-linear-gradient(135deg, rgba(120, 98, 64, 0.08) 0 1px, transparent 1px 18px),
+    var(--stone);
+}

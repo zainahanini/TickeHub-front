@@ -1,0 +1,62 @@
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h1>My sessions</h1>
+      <p>Devices that are currently signed in to your account.</p>
+    </div>
+    <button type="button" class="danger-btn" [disabled]="loggingOutAll()" (click)="logoutAll()">
+      {{ loggingOutAll() ? 'Signing out...' : 'Sign out everywhere' }}
+    </button>
+  </div>
+
+  @if (error()) {
+    <p class="banner error">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading sessions...</p>
+  } @else if (sessions().length === 0) {
+    <p class="muted">No active sessions.</p>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Device</th>
+            <th>IP</th>
+            <th>Signed in</th>
+            <th>Last seen</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (session of sessions(); track session.id) {
+            <tr>
+              <td>
+                <div class="device">
+                  {{ session.userAgent || 'Unknown device' }}
+                  @if (session.isCurrent) {
+                    <span class="badge">This device</span>
+                  }
+                </div>
+              </td>
+              <td>{{ session.ipAddress || '-' }}</td>
+              <td>{{ session.createdAt | date: 'medium' }}</td>
+              <td>{{ session.lastSeenAt ? (session.lastSeenAt | date: 'medium') : '-' }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="revoke-btn"
+                  [disabled]="pendingId() === session.id"
+                  (click)="revoke(session)"
+                >
+                  {{ pendingId() === session.id ? 'Revoking...' : 'Revoke' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

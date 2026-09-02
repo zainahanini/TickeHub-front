@@ -1,0 +1,37 @@
+.form-error,
+.form-success {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.form-error {
+  background: #fff1f2;
+  border: 1px solid rgba(206, 17, 38, 0.18);
+  color: var(--red);
+}
+
+.form-success {
+  background: #edf8f1;
+  border: 1px solid rgba(0, 122, 61, 0.2);
+  color: var(--green-dark);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--red);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.field input.ng-invalid.ng-touched {
+  border-color: var(--red);
+}
+
+.primary-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

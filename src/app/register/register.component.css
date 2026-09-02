@@ -1,0 +1,154 @@
+:host {
+  display: block;
+}
+
+.auth-card {
+  width: min(100%, 460px);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-top: 6px solid var(--green);
+  border-radius: 8px;
+  padding: 26px 24px 24px;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+
+.auth-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  background: linear-gradient(90deg, var(--black) 0 28%, #ffffff 28% 50%, var(--green) 50% 72%, var(--red) 72% 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+.municipal-brand {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.municipal-seal {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 2px solid var(--green);
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--green-dark);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.municipal-brand strong {
+  display: block;
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.municipal-brand span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+h1 {
+  margin: 0 0 20px;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.split-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.field span {
+  font-size: 0.95rem;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 12px 14px;
+  color: var(--ink);
+  font: inherit;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(0, 122, 61, 0.1);
+}
+
+.primary-btn {
+  border: none;
+  border-radius: 6px;
+  background: var(--green);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  padding: 12px 18px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: var(--green-dark);
+}
+
+.meta {
+  margin: 20px 0 0;
+  font-size: 0.95rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.meta a {
+  color: var(--red);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.meta a:hover {
+  text-decoration: underline;
+}
+
+.field em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 560px) {
+  .split-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-card {
+    padding: 24px 18px 20px;
+  }
+}
