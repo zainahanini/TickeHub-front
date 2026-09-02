@@ -1,0 +1,33 @@
+<main class="ticket-page">
+  <section class="ticket-card">
+    <div class="municipal-brand">
+      <div class="municipal-seal" aria-hidden="true">M</div>
+      <div><strong>Palestine Civic Services</strong><span>Report tracking</span></div>
+    </div>
+
+    @if (ticketNumber()) {
+      <div class="confirmation">
+        <p class="eyebrow">Report received</p>
+        <h1>Thank you for reporting this problem.</h1>
+        <p>Your reference number is:</p>
+        <strong class="reference">{{ ticketNumber() }}</strong>
+        <p class="confirmation-note">Keep this number for future follow-up.</p>
+      </div>
+    } @else {
+      <div class="heading"><p class="eyebrow">Ticket details</p><h1>Report status</h1></div>
+    }
+
+    @if (loading()) { <p class="status-message">Loading report details...</p> }
+    @if (error()) { <p class="form-error">{{ error() }}</p> }
+    @if (ticket(); as currentTicket) {
+      <dl class="ticket-summary">
+        <div><dt>Title</dt><dd>{{ currentTicket.title }}</dd></div>
+        <div><dt>Status</dt><dd>{{ currentTicket.status }}</dd></div>
+        <div><dt>Priority</dt><dd>{{ currentTicket.priority }}</dd></div>
+        <div><dt>Description</dt><dd>{{ currentTicket.description }}</dd></div>
+      </dl>
+    }
+
+    <div class="actions"><a routerLink="/report-problem" class="primary-btn">Report another problem</a><a routerLink="/login">Sign in</a></div>
+  </section>
+</main>

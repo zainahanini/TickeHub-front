@@ -65,6 +65,7 @@ export interface TicketListItem {
 
 export interface Ticket {
   id: number;
+  ticketNumber?: string;
   title: string;
   description: string;
   status: TicketStatus;
@@ -78,6 +79,20 @@ export interface Ticket {
   comments?: Comment[];
   attachments?: Attachment[];
   rating?: Rating | null;
+}
+
+export interface CreateTicketRequest {
+  title: string;
+  description: string;
+  categoryId: number;
+  priority: TicketPriority;
+  location?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  reporterName?: string | null;
+  reporterEmail?: string | null;
+  reporterPhone?: string | null;
 }
 
 export interface Comment {

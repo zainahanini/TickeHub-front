@@ -2,7 +2,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Rating, Ticket, TicketListItem, TicketQuery, TicketStatus } from '../models';
+import {
+  CreateTicketRequest,
+  Rating,
+  Ticket,
+  TicketListItem,
+  TicketQuery,
+  TicketStatus,
+} from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class TicketService {
@@ -25,7 +32,7 @@ export class TicketService {
     return this.http.get<Ticket>(`${this.base}/${id}`);
   }
 
-  create(ticket: Partial<Ticket>): Observable<Ticket> {
+  create(ticket: CreateTicketRequest): Observable<Ticket> {
     return this.http.post<Ticket>(this.base, ticket);
   }
 

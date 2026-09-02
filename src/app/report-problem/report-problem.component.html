@@ -1,0 +1,100 @@
+<main class="report-page">
+  <section class="report-card">
+    <div class="municipal-brand">
+      <div class="municipal-seal" aria-hidden="true">M</div>
+      <div>
+        <strong>Palestine Civic Services</strong>
+        <span>Public issue reporting</span>
+      </div>
+    </div>
+
+    <div class="heading-row">
+      <div>
+        <p class="eyebrow">Community services</p>
+        <h1>Report a problem</h1>
+        <p class="intro">Tell us what happened and where it needs attention. You can follow up with the reference number after submitting.</p>
+      </div>
+      @if (isAuthenticated) {
+        <span class="public-badge">Signed-in report</span>
+      } @else {
+        <span class="public-badge">Public form</span>
+      }
+    </div>
+
+    <form class="report-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (serverError()) { <p class="form-error">{{ serverError() }}</p> }
+      @if (categoryError()) { <p class="form-error">{{ categoryError() }}</p> }
+
+      <div class="form-section">
+        <h2>What needs attention?</h2>
+        <label class="field">
+          <span>Title</span>
+          <input type="text" formControlName="title" maxlength="120" placeholder="e.g. Streetlight out on Oak Avenue" />
+          <small>{{ form.controls.title.value.length }}/120</small>
+          @if (form.controls.title.touched && form.controls.title.invalid) { <p class="field-error">Enter a title between 5 and 120 characters.</p> }
+        </label>
+        <label class="field">
+          <span>Description</span>
+          <textarea formControlName="description" rows="5" maxlength="4000" placeholder="Describe the problem, its impact, and any useful details"></textarea>
+          <small>{{ form.controls.description.value.length }}/4000</small>
+          @if (form.controls.description.touched && form.controls.description.invalid) { <p class="field-error">Enter a description between 10 and 4000 characters.</p> }
+        </label>
+        <div class="field-grid">
+          <label class="field">
+            <span>Category</span>
+            <select formControlName="categoryId">
+              <option [ngValue]="null">{{ loadingCategories() ? 'Loading categories...' : 'Select a category' }}</option>
+              @for (category of categories(); track category.id) { <option [ngValue]="category.id">{{ category.name }}</option> }
+            </select>
+            @if (form.controls.categoryId.touched && form.controls.categoryId.invalid) { <p class="field-error">Choose a category.</p> }
+          </label>
+          <fieldset class="field priority-field">
+            <legend>Priority</legend>
+            <div class="priority-options">
+              @for (priority of priorities; track priority) {
+                <label class="priority-option" [class]="'priority-' + priority.toLowerCase()">
+                  <input type="radio" formControlName="priority" [value]="priority" />
+                  <span>{{ priority }}</span>
+                </label>
+              }
+            </div>
+          </fieldset>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Where is it?</h2>
+        <div class="field-grid">
+          <label class="field"><span>Location <em>(optional)</em></span><input type="text" formControlName="location" maxlength="200" placeholder="Park, road, building or landmark" /></label>
+          <label class="field"><span>Address <em>(optional)</em></span><input type="text" formControlName="address" maxlength="300" placeholder="Street address or nearby landmark" /></label>
+        </div>
+        <div class="field-grid">
+          <label class="field"><span>Latitude <em>(optional)</em></span><input type="number" formControlName="latitude" min="-90" max="90" step="any" placeholder="-90 to 90" />@if (form.controls.latitude.touched && form.controls.latitude.invalid) { <p class="field-error">Latitude must be between -90 and 90.</p> }</label>
+          <label class="field"><span>Longitude <em>(optional)</em></span><input type="number" formControlName="longitude" min="-180" max="180" step="any" placeholder="-180 to 180" />@if (form.controls.longitude.touched && form.controls.longitude.invalid) { <p class="field-error">Longitude must be between -180 and 180.</p> }</label>
+        </div>
+      </div>
+
+      @if (isAuthenticated) {
+        <div class="signed-in-note">
+          <strong>Submitting as {{ user?.displayName }}</strong>
+          <span>{{ user?.email }} · Your account will be linked to this report.</span>
+        </div>
+      } @else {
+        <div class="form-section contact-section">
+          <h2>How can we reach you?</h2>
+          <p class="section-note">Because you are reporting anonymously, provide your name and at least one contact method.</p>
+          <div class="field-grid">
+            <label class="field"><span>Name</span><input type="text" formControlName="reporterName" maxlength="80" autocomplete="name" />@if (form.controls.reporterName.touched && form.controls.reporterName.invalid) { <p class="field-error">Enter a name between 2 and 80 characters.</p> }</label>
+            <label class="field"><span>Email <em>(optional if phone is provided)</em></span><input type="email" formControlName="reporterEmail" maxlength="254" autocomplete="email" />@if (form.controls.reporterEmail.touched && form.controls.reporterEmail.invalid) { <p class="field-error">Enter a valid email address.</p> }</label>
+          </div>
+          <label class="field"><span>Phone <em>(optional if email is provided)</em></span><input type="tel" formControlName="reporterPhone" maxlength="30" autocomplete="tel" />@if (form.touched && form.hasError('anonymousContact')) { <p class="field-error">Provide your name and at least one of email or phone.</p> }</label>
+        </div>
+      }
+
+      <div class="form-actions">
+        @if (!isAuthenticated) { <a routerLink="/login">Sign in instead</a> }
+        <button type="submit" class="primary-btn" [disabled]="submitting() || loadingCategories()">{{ submitting() ? 'Submitting report...' : 'Submit report' }}</button>
+      </div>
+    </form>
+  </section>
+</main>

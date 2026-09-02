@@ -13,6 +13,10 @@ export class CategoryService {
     return this.http.get<Category[]>(this.base);
   }
 
+  lookup(): Observable<Category[]> {
+    return this.http.get<Category[]>(`${this.base}/lookup`);
+  }
+
   getById(id: number): Observable<Category> {
     return this.http.get<Category>(`${this.base}/${id}`);
   }
