@@ -1,1 +1,37 @@
-/* You can add global styles to this file, and also import other style files */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --ink: #161616;
+  --muted: #5f625f;
+  --paper: #fffdf8;
+  --stone: #f3efe5;
+  --stone-deep: #ded4c2;
+  --border: #d8d0c2;
+  --green: #007a3d;
+  --green-dark: #005f35;
+  --red: #ce1126;
+  --black: #101010;
+  --shadow: 0 16px 38px rgba(28, 24, 18, 0.1);
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--ink);
+  font-family:
+    "Segoe UI",
+    "Noto Sans Arabic",
+    Tahoma,
+    Arial,
+    sans-serif;
+  background: var(--stone);
+}
+
+body {
+  min-width: 320px;
+}
