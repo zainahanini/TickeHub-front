@@ -4,6 +4,7 @@ import { ChangePasswordComponent } from './account/change-password.component';
 import { SessionsComponent } from './account/sessions.component';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { publicReportGuard } from './core/guards/public-report.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { UserType } from './core/models';
 import { ForgotPasswordComponent } from './forgot-password/forgot-password.component';
@@ -20,7 +21,7 @@ import { NotificationsComponent } from './notifications/notifications.component'
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
-  { path: 'report-problem', component: ReportProblemComponent },
+  { path: 'report-problem', component: ReportProblemComponent, canMatch: [publicReportGuard] },
   { path: 'tickets/:id', component: TicketDetailComponent, canActivate: [authGuard] },
   { path: 'agent/tickets', component: AgentTicketsComponent, canActivate: [authGuard, roleGuard], data: { roles: [UserType.Agent, UserType.Supervisor, UserType.Admin] } },
   { path: 'agent/profile', component: AgentDetailComponent, canActivate: [authGuard, roleGuard], data: { roles: [UserType.Agent, UserType.Supervisor, UserType.Admin] } },
@@ -36,6 +37,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: 'tickets', component: TicketsComponent },
+      { path: 'report-problem', component: ReportProblemComponent },
       { path: 'sessions', component: SessionsComponent },
       { path: 'change-password', component: ChangePasswordComponent },
       { path: 'notifications', component: NotificationsComponent },

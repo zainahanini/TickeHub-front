@@ -48,8 +48,6 @@ export class TicketDetailComponent {
   readonly interactionError = signal<string | null>(null);
   readonly commentBody = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(1), Validators.maxLength(2000)] });
   readonly editingCommentId = signal<number | null>(null);
-  readonly attachmentDescription = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(300)] });
-  readonly uploadPending = signal(false);
   readonly ratingScore = new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(1), Validators.max(5)] });
   readonly ratingComment = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(1000)] });
   readonly ratingPending = signal(false);
@@ -218,18 +216,6 @@ export class TicketDetailComponent {
     this.agentService.autoAssign(id).subscribe({
       next: () => { this.assignmentPending.set(false); this.tickets.getById(id).subscribe((ticket) => this.ticket.set(ticket)); },
       error: (error: unknown) => { this.assignmentPending.set(false); this.interactionError.set(apiErrorMessage(error, 'Could not auto-assign this ticket.')); },
-    });
-  }
-
-  uploadAttachment(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    const id = this.ticketId();
-    if (!file || !id || this.uploadPending()) return;
-    this.uploadPending.set(true);
-    this.attachmentsService.upload(id, file, this.attachmentDescription.value).subscribe({
-      next: (attachment) => { this.attachments.update((items) => [...items, attachment]); this.attachmentDescription.reset(''); input.value = ''; this.uploadPending.set(false); },
-      error: (error: unknown) => { this.interactionError.set(apiErrorMessage(error, 'Could not upload attachment.')); this.uploadPending.set(false); },
     });
   }
 

@@ -84,9 +84,6 @@
       @if (attachmentsLoading()) { <p class="status-message">Loading attachments...</p> }
       @else if (attachments().length === 0) { <p class="status-message">No attachments.</p> }
       @else { <ul class="attachment-list">@for (attachment of attachments(); track attachment.id) { <li><span><strong>{{ attachment.fileName }}</strong><small>{{ attachment.description || 'Attachment' }}</small></span><span class="inline-actions"><button type="button" class="secondary-btn" (click)="downloadAttachment(attachment)">Download</button>@if (isStaff) { <button type="button" class="secondary-btn danger" (click)="deleteAttachment(attachment)">Delete</button> }</span></li> }</ul> }
-      <label class="field"><span>Description <em>(optional)</em></span><input type="text" [formControl]="attachmentDescription" maxlength="300" placeholder="What does this file show?" /></label>
-      @if (attachmentDescription.invalid && attachmentDescription.touched) { <p class="field-error">Description must be 300 characters or fewer.</p> }
-      <label class="upload-button">{{ uploadPending() ? 'Uploading...' : 'Choose a file to upload' }}<input type="file" [disabled]="uploadPending()" (change)="uploadAttachment($event)" /></label>
     </section>
 
     @if (ticket()?.status === 'Resolved' || ticket()?.status === 'Closed') {
