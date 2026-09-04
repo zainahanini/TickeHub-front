@@ -28,6 +28,9 @@ h1 { margin: 0; color: var(--black); font-size: clamp(2rem, 5vw, 3.4rem); line-h
 .section-note { margin: -8px 0 18px; color: #625d54; font-size: .9rem; line-height: 1.5; }
 .signed-in-note { display: grid; gap: 5px; padding: 15px 17px; border-left: 4px solid var(--green); background: #f4faf6; color: var(--black); }
 .signed-in-note span { color: #625d54; font-size: .88rem; line-height: 1.45; }
+.attachment-section em { color: #81796c; font-size: .78rem; font-style: normal; font-weight: 500; }
+.upload-button { display: inline-block; width: fit-content; border: 1px dashed var(--green); border-radius: 4px; padding: 10px 13px; color: var(--green-dark); font-weight: 700; cursor: pointer; }
+.upload-button input { display: block; margin-top: 7px; max-width: 100%; font: inherit; }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .priority-field { min-width: 0; margin: 0; padding: 0; border: 0; }
 .priority-field legend { margin-bottom: 7px; color: var(--black); font-size: .88rem; font-weight: 700; }

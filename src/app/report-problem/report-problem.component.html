@@ -73,6 +73,17 @@
       </div>
 
       @if (isAuthenticated) {
+        <div class="form-section attachment-section">
+          <h2>Add a picture <em>(optional)</em></h2>
+          <p class="section-note">Attach a photo that helps explain the problem.</p>
+          <label class="upload-button">
+            {{ selectedFileName() || 'Choose an image' }}
+            <input id="report-attachment" type="file" accept="image/*" (change)="selectAttachment($event)" [disabled]="submitting() || attachmentPending()" />
+          </label>
+        </div>
+      }
+
+      @if (isAuthenticated) {
         <div class="signed-in-note">
           <strong>Submitting as {{ user?.displayName }}</strong>
           <span>{{ user?.email }} · Your account will be linked to this report.</span>

@@ -9,6 +9,37 @@
 
     @if (loading()) { <p class="status-message">Loading report details...</p> }
     @if (error()) { <p class="form-error">{{ error() }}</p> }
+    @if (isStaff && editError()) { <p class="form-error">{{ editError() }}</p> }
+    @if (canAssign && ticket(); as assignableTicket) {
+      <section class="assignment-section">
+        <h2>Assignment</h2>
+        <div class="assignment-row">
+          <select [formControl]="selectedAgentId" aria-label="Assign agent">
+            <option [ngValue]="null">Select an active agent</option>
+            @for (agent of agents(); track agent.id) {
+              @if (agent.departmentId === assignableTicket.departmentId && agent.isAvailable && (agent.capacity === undefined || agent.openTicketCount === undefined || agent.openTicketCount < agent.capacity)) {
+                <option [ngValue]="agent.id">{{ agent.firstName }} {{ agent.lastName }}{{ agent.openTicketCount !== undefined && agent.capacity !== undefined ? ' (' + agent.openTicketCount + '/' + agent.capacity + ')' : '' }}</option>
+              }
+            }
+          </select>
+          <button type="button" class="secondary-btn" [disabled]="assignmentPending()" (click)="assignTicket()">{{ assignmentPending() ? 'Assigning...' : 'Assign' }}</button>
+          <button type="button" class="secondary-btn" [disabled]="assignmentPending()" (click)="autoAssignTicket()">Auto-assign</button>
+        </div>
+      </section>
+    }
+    @if (isStaff && ticket(); as editableTicket) {
+      @if (!editingTicket()) {
+        <div class="staff-actions"><button type="button" class="secondary-btn" (click)="beginTicketEdit()">Edit ticket</button>@if (editableTicket.status === 'Resolved' || editableTicket.status === 'Closed') { <button type="button" class="secondary-btn" (click)="reopenTicket()" [disabled]="pendingAction()">{{ pendingAction() === 'reopen' ? 'Reopening...' : 'Reopen ticket' }}</button> }</div>
+      } @else {
+        <form class="edit-form" (submit)="$event.preventDefault(); saveTicket()">
+          <label class="field"><span>Title</span><input [formControl]="editForm.controls.title" maxlength="120" /></label>
+          <label class="field"><span>Description</span><textarea [formControl]="editForm.controls.description" maxlength="4000" rows="4"></textarea></label>
+          <div class="field-grid"><label class="field"><span>Category</span><select [formControl]="editForm.controls.categoryId">@for (category of categories(); track category.id) { <option [ngValue]="category.id">{{ category.name }}</option> }</select></label><label class="field"><span>Priority</span><select [formControl]="editForm.controls.priority">@for (priority of priorities; track priority) { <option [value]="priority">{{ priority }}</option> }</select></label></div>
+          <label class="field"><span>Location</span><input [formControl]="editForm.controls.locationAddress" maxlength="300" /></label>
+          <div class="inline-actions"><button type="submit" class="primary-btn" [disabled]="editPending()">{{ editPending() ? 'Saving...' : 'Save ticket' }}</button><button type="button" class="secondary-btn" (click)="editingTicket.set(false)">Cancel</button></div>
+        </form>
+      }
+    }
     @if (ticket(); as currentTicket) {
       <dl class="ticket-summary">
         <div><dt>Ticket number</dt><dd>{{ currentTicket.ticketNumber || '-' }}</dd></div>
@@ -27,7 +58,7 @@
     }
 
     @if (!workflowLoading() && workflow().length) {
-      <section class="workflow"><h2>Available actions</h2><div class="workflow-actions">@for (action of workflow(); track action.action || action.name || action.status) { <button type="button" [disabled]="!action.toStatus && !action.status || pendingAction()" (click)="applyWorkflowAction(action)">{{ pendingAction() === (action.action || action.name || action.toStatus || action.status) ? 'Updating...' : (action.label || action.name || action.action || action.toStatus || action.status) }}</button> }</div></section>
+      <section class="workflow"><h2>Available actions</h2>@if (workflow().some((action) => action.reasonRequired)) { <label class="field"><span>Reason</span><textarea [formControl]="workflowReason" maxlength="1000" rows="2"></textarea></label> }<div class="workflow-actions">@for (action of workflow(); track action.action || action.name || action.status) { <button type="button" [disabled]="!action.toStatus && !action.status || pendingAction()" (click)="applyWorkflowAction(action)">{{ pendingAction() === (action.action || action.name || action.toStatus || action.status) ? 'Updating...' : (action.label || action.name || action.action || action.toStatus || action.status) }}</button> }</div></section>
     }
     @if (history().length) {
       <section class="history"><h2>History</h2><ol>@for (entry of history(); track entry.id || entry.createdAt) { <li><strong>{{ entry.action || entry.fromStatus + ' to ' + entry.toStatus }}</strong><span>{{ entry.description || entry.changedByName || '' }}</span><time>{{ entry.createdAt | date: 'medium' }}</time></li> }</ol></section>
@@ -43,6 +74,7 @@
       <form class="interaction-form" (submit)="$event.preventDefault(); editingCommentId() ? saveComment() : addComment()">
         <label class="field"><span>{{ editingCommentId() ? 'Edit comment' : 'Add a comment' }}</span><textarea [formControl]="commentBody" maxlength="2000" rows="4" placeholder="Write a comment"></textarea></label>
         @if (commentBody.touched && commentBody.invalid) { <p class="field-error">Comment is required and must be 1–2000 characters.</p> }
+        @if (isStaff) { <label class="check"><input type="checkbox" [formControl]="internalComment" /> Internal note for staff only</label> }
         <div class="inline-actions"><button type="submit" class="primary-btn">{{ editingCommentId() ? 'Save comment' : 'Post comment' }}</button>@if (editingCommentId()) { <button type="button" class="secondary-btn" (click)="editingCommentId.set(null); commentBody.reset('')">Cancel</button> }</div>
       </form>
     </section>
@@ -51,17 +83,19 @@
       <h2>Attachments</h2>
       @if (attachmentsLoading()) { <p class="status-message">Loading attachments...</p> }
       @else if (attachments().length === 0) { <p class="status-message">No attachments.</p> }
-      @else { <ul class="attachment-list">@for (attachment of attachments(); track attachment.id) { <li><span><strong>{{ attachment.fileName }}</strong><small>{{ attachment.description || 'Attachment' }}</small></span><button type="button" class="secondary-btn" (click)="downloadAttachment(attachment)">Download</button></li> }</ul> }
+      @else { <ul class="attachment-list">@for (attachment of attachments(); track attachment.id) { <li><span><strong>{{ attachment.fileName }}</strong><small>{{ attachment.description || 'Attachment' }}</small></span><span class="inline-actions"><button type="button" class="secondary-btn" (click)="downloadAttachment(attachment)">Download</button>@if (isStaff) { <button type="button" class="secondary-btn danger" (click)="deleteAttachment(attachment)">Delete</button> }</span></li> }</ul> }
       <label class="field"><span>Description <em>(optional)</em></span><input type="text" [formControl]="attachmentDescription" maxlength="300" placeholder="What does this file show?" /></label>
       @if (attachmentDescription.invalid && attachmentDescription.touched) { <p class="field-error">Description must be 300 characters or fewer.</p> }
       <label class="upload-button">{{ uploadPending() ? 'Uploading...' : 'Choose a file to upload' }}<input type="file" [disabled]="uploadPending()" (change)="uploadAttachment($event)" /></label>
     </section>
 
+    @if (ticket()?.status === 'Resolved' || ticket()?.status === 'Closed') {
     <section class="interaction-section rating-section">
       <h2>Rate this service</h2>
       @if (rating(); as existingRating) { <p class="status-message">You rated this ticket {{ existingRating.score }} out of 5.</p> }
       @else { <div class="rating-options">@for (score of [1, 2, 3, 4, 5]; track score) { <label><input type="radio" [formControl]="ratingScore" [value]="score" /> <span>{{ score }}</span></label> }</div>@if (ratingScore.touched && ratingScore.invalid) { <p class="field-error">Choose a rating from 1 to 5.</p> }<label class="field"><span>Comment <em>(optional)</em></span><textarea [formControl]="ratingComment" maxlength="1000" rows="3" placeholder="Tell us about your experience"></textarea></label><button type="button" class="primary-btn" [disabled]="ratingPending()" (click)="submitRating()">{{ ratingPending() ? 'Submitting...' : 'Submit rating' }}</button> }
     </section>
+    }
     }
 
     <div class="actions">

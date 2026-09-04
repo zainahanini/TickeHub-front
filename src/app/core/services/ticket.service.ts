@@ -13,6 +13,8 @@ import {
   PagedTickets,
   TicketHistoryEntry,
   TicketWorkflowAction,
+  UpdateTicketRequest,
+  ChangeTicketStatusRequest,
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -68,14 +70,19 @@ export class TicketService {
     return this.http.post<Ticket>(this.base, ticket);
   }
 
-  update(id: number, ticket: Partial<Ticket>): Observable<Ticket> {
+  update(id: number, ticket: UpdateTicketRequest): Observable<Ticket> {
     return this.http.put<Ticket>(`${this.base}/${id}`, ticket);
   }
 
-  updateStatus(id: number, status: TicketStatus): Observable<Ticket> {
-    return this.http.patch<Ticket>(`${this.base}/${id}/status`, { status });
+  updateStatus(id: number, request: ChangeTicketStatusRequest): Observable<Ticket> {
+    return this.http.patch<Ticket>(`${this.base}/${id}/status`, request);
   }
 
+  reopen(id: number, reason?: string, rowVersion?: string | null): Observable<Ticket> {
+    return this.http.post<Ticket>(`${this.base}/${id}/reopen`, { reason, rowVersion });
+  }
+
+  assign(id: number, agentId: number): Observable<Ticket> {
   assign(id: number, agentId: number): Observable<Ticket> {
     return this.http.patch<Ticket>(`${this.base}/${id}/assign`, { agentId });
   }

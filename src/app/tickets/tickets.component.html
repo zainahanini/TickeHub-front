@@ -1,0 +1,33 @@
+<section class="ticket-panel">
+  <header class="panel-head">
+    <div><p class="eyebrow">Citizen services</p><h1>My tickets</h1><p>Track reports submitted from your account.</p></div>
+    <a routerLink="/report-problem" class="primary-btn">Report a problem</a>
+  </header>
+
+  <div class="tabs"><button type="button" [class.active]="mode() === 'mine'" (click)="showMine()">My reported tickets</button><button type="button" [class.active]="mode() === 'search'" (click)="showSearch()">Search tickets</button></div>
+
+  @if (mode() === 'search') {
+    <form class="filters" (submit)="$event.preventDefault(); applyFilters()">
+      <input [formControl]="search" placeholder="Search title or description" aria-label="Search tickets" />
+      <select [formControl]="status" (change)="applyFilters()" aria-label="Filter by status"><option value="">All statuses</option>@for (item of statuses; track item) { <option [value]="item">{{ item }}</option> }</select>
+      <select [formControl]="priority" (change)="applyFilters()" aria-label="Filter by priority"><option value="">All priorities</option>@for (item of priorities; track item) { <option [value]="item">{{ item }}</option> }</select>
+      <select [formControl]="categoryId" (change)="applyFilters()" aria-label="Filter by category"><option value="">All categories</option>@for (category of categories(); track category.id) { <option [value]="category.id">{{ category.name }}</option> }</select>
+      <select [formControl]="sortBy" (change)="applyFilters()" aria-label="Sort by"><option value="createdAt">Date created</option><option value="title">Title</option><option value="status">Status</option><option value="priority">Priority</option></select>
+      <select [formControl]="sortDescending" (change)="applyFilters()" aria-label="Sort direction"><option value="true">Newest first</option><option value="false">Oldest first</option></select>
+      <button type="submit" class="primary-btn">Search</button>
+      <button type="button" class="reset-btn" (click)="resetFilters()">Reset</button>
+    </form>
+  }
+
+  @if (error()) { <p class="banner error">{{ error() }}</p> }
+  @if (loading()) { <p class="muted">Loading tickets...</p> }
+  @else if (mode() === 'mine' && mine().length === 0) { <p class="muted empty">You have not reported any tickets yet.</p> }
+  @else if (mode() === 'mine') {
+    <div class="ticket-grid">@for (ticket of mine(); track ticket.id) { <a class="ticket-item" [routerLink]="['/tickets', ticket.id]"><div class="ticket-top"><strong>{{ ticket.ticketNumber || ('Ticket #' + ticket.id) }}</strong><span class="status">{{ ticket.status }}</span></div><h2>{{ ticket.title }}</h2><p>{{ ticket.categoryName || 'Category unavailable' }} · {{ ticket.departmentName || 'Department unavailable' }}</p><small>Created {{ (ticket.createdAt || ticket.createdDate) | date: 'medium' }}</small></a> }</div>
+  }
+  @else if (results(); as pageResults) {
+    @if (pageResults.items.length === 0) { <p class="muted empty">No tickets match your search.</p> }
+    <div class="ticket-grid">@for (ticket of pageResults.items; track ticket.id) { <a class="ticket-item" [routerLink]="['/tickets', ticket.id]"><div class="ticket-top"><strong>{{ ticket.ticketNumber || ('Ticket #' + ticket.id) }}</strong><span class="status">{{ ticket.status }}</span></div><h2>{{ ticket.title }}</h2><p>{{ ticket.categoryName || 'Category unavailable' }} · {{ ticket.departmentName || 'Department unavailable' }}</p><small>Created {{ (ticket.createdAt || ticket.createdDate) | date: 'medium' }}</small></a> }</div>
+    <div class="pagination"><button type="button" (click)="previousPage()" [disabled]="page() === 1">Previous</button><span>Page {{ pageResults.page }} of {{ pageCount(pageResults.totalCount, pageResults.pageSize) }}</span><button type="button" (click)="nextPage()" [disabled]="page() * pageResults.pageSize >= pageResults.totalCount">Next</button></div>
+  }
+</section>

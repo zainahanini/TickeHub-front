@@ -13,13 +13,14 @@ export class CommentService {
     return this.http.get<Comment[]>(`${this.api}/tickets/${ticketId}/comments`);
   }
 
-  create(ticketId: number, body: string): Observable<Comment> {
-    return this.http.post<Comment>(`${this.api}/tickets/${ticketId}/comments`, { body });
+  create(ticketId: number, body: string, isInternal = false): Observable<Comment> {
+    return this.http.post<Comment>(`${this.api}/tickets/${ticketId}/comments`, { body, isInternal });
   }
 
-  update(ticketId: number, commentId: number, body: string): Observable<Comment> {
+  update(ticketId: number, commentId: number, body: string, isInternal = false): Observable<Comment> {
     return this.http.put<Comment>(`${this.api}/tickets/${ticketId}/comments/${commentId}`, {
       body,
+      isInternal,
     });
   }
 
