@@ -2,6 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Ticket } from '../core/models';
 import { TicketService } from '../core/services/ticket.service';
+import { CurrentUserService } from '../core/services/current-user.service';
+import { TokenService } from '../core/services/token.service';
 
 @Component({
   selector: 'app-ticket-detail',
@@ -13,7 +15,10 @@ import { TicketService } from '../core/services/ticket.service';
 export class TicketDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly tickets = inject(TicketService);
+  private readonly currentUser = inject(CurrentUserService);
+  private readonly tokens = inject(TokenService);
 
+  readonly isAuthenticated = !!this.currentUser.snapshot() || !!this.tokens.accessToken || !!this.tokens.refreshToken;
   readonly ticket = signal<Ticket | null>(null);
   readonly ticketNumber = signal(this.route.snapshot.queryParamMap.get('ticketNumber') || null);
   readonly loading = signal(true);

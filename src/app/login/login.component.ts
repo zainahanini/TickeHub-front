@@ -3,7 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { applyValidationErrors } from '../core/api-error';
-import { emailValidators } from '../core/auth-validation';
+import { emailValidators, passwordValidators } from '../core/auth-validation';
 import { AuthService } from '../core/services/auth.service';
 
 @Component({
@@ -22,7 +22,7 @@ export class LoginComponent {
 
   readonly form = new FormGroup({
     email: new FormControl('', { nonNullable: true, validators: emailValidators }),
-    password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    password: new FormControl('', { nonNullable: true, validators: passwordValidators }),
   });
 
   openReportProblem(): void {

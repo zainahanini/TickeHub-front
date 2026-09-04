@@ -54,7 +54,7 @@ export class AuthInterceptor implements HttpInterceptor {
   private withAuthHeader(req: HttpRequest<unknown>): HttpRequest<unknown> {
     if (
       ANONYMOUS_AUTH_PATHS.some((path) => req.url.includes(path)) ||
-      PUBLIC_API_PATHS.some((path) => req.url.includes(path))
+      (PUBLIC_API_PATHS.some((path) => req.url.includes(path)) && !this.hasSession())
     ) {
       return req;
     }
@@ -64,6 +64,10 @@ export class AuthInterceptor implements HttpInterceptor {
       return req;
     }
     return req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
+  }
+
+  private hasSession(): boolean {
+    return !!this.tokens.accessToken || !!this.tokens.refreshToken;
   }
 
   private retryRequest(req: HttpRequest<unknown>): HttpRequest<unknown> {
@@ -89,7 +93,7 @@ export class AuthInterceptor implements HttpInterceptor {
       return false;
     }
     if (PUBLIC_API_PATHS.some((path) => req.url.includes(path))) {
-      return false;
+      return !this.hasSession();
     }
     if (req.url.endsWith('/tickets') && req.method === 'POST') {
       return !this.tokens.accessToken && !this.tokens.refreshToken;

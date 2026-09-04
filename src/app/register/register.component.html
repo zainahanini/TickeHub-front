@@ -18,7 +18,7 @@
       <span>Display name</span>
       <input type="text" formControlName="displayName" autocomplete="name" />
       @if (form.controls.displayName.touched && form.controls.displayName.invalid) {
-        <p class="field-error">Enter a display name (at least 2 characters).</p>
+        <p class="field-error">Enter a display name between 2 and 80 characters.</p>
       }
     </label>
 

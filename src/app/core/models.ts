@@ -85,14 +85,13 @@ export interface CreateTicketRequest {
   title: string;
   description: string;
   categoryId: number;
-  priority: TicketPriority;
-  location?: string | null;
-  address?: string | null;
+  priority?: TicketPriority | null;
+  reporterName: string;
+  reporterPhone?: string | null;
+  reporterEmail?: string | null;
+  locationAddress?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  reporterName?: string | null;
-  reporterEmail?: string | null;
-  reporterPhone?: string | null;
 }
 
 export interface Comment {

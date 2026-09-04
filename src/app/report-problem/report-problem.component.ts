@@ -1,17 +1,25 @@
 import { Component, inject, signal } from '@angular/core';
-import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { applyValidationErrors } from '../core/api-error';
 import { Category, CreateTicketRequest, TicketPriority } from '../core/models';
 import { CategoryService } from '../core/services/category.service';
 import { TicketService } from '../core/services/ticket.service';
 import { CurrentUserService } from '../core/services/current-user.service';
+import { TokenService } from '../core/services/token.service';
 
-function anonymousContactValidator(control: AbstractControl): ValidationErrors | null {
-  const name = String(control.get('reporterName')?.value ?? '').trim();
-  const email = String(control.get('reporterEmail')?.value ?? '').trim();
-  const phone = String(control.get('reporterPhone')?.value ?? '').trim();
-  return name && (email || phone) ? null : { anonymousContact: true };
+function reportValidator(anonymous: boolean): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const errors: ValidationErrors = {};
+    const latitude = control.get('latitude')?.value as number | null;
+    const longitude = control.get('longitude')?.value as number | null;
+    const priority = control.get('priority')?.value;
+    const locationAddress = String(control.get('locationAddress')?.value ?? '').trim();
+    if ((latitude === null) !== (longitude === null)) errors['coordinatesTogether'] = true;
+    if (anonymous && !String(control.get('reporterEmail')?.value ?? '').trim() && !String(control.get('reporterPhone')?.value ?? '').trim()) errors['anonymousContact'] = true;
+    if (priority === TicketPriority.Urgent && !locationAddress) errors['urgentLocation'] = true;
+    return Object.keys(errors).length ? errors : null;
+  };
 }
 
 @Component({
@@ -26,15 +34,18 @@ export class ReportProblemComponent {
   private readonly tickets = inject(TicketService);
   private readonly router = inject(Router);
   private readonly currentUser = inject(CurrentUserService);
+  private readonly tokens = inject(TokenService);
 
   readonly user = this.currentUser.snapshot();
-  readonly isAuthenticated = !!this.user;
+  readonly isAuthenticated = !!this.user || !!this.tokens.accessToken || !!this.tokens.refreshToken;
 
   readonly categories = signal<Category[]>([]);
   readonly loadingCategories = signal(true);
   readonly submitting = signal(false);
   readonly serverError = signal<string | null>(null);
   readonly categoryError = signal<string | null>(null);
+  readonly successMessage = signal<string | null>(null);
+  readonly submittedTicketNumber = signal<string | null>(null);
   readonly priorities = Object.values(TicketPriority);
 
   readonly form = new FormGroup(
@@ -42,16 +53,16 @@ export class ReportProblemComponent {
       title: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(5), Validators.maxLength(120)] }),
       description: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(10), Validators.maxLength(4000)] }),
       categoryId: new FormControl<number | null>(null, { validators: [Validators.required] }),
-      priority: new FormControl<TicketPriority>(TicketPriority.Medium, { nonNullable: true, validators: [Validators.required] }),
+      priority: new FormControl<TicketPriority | null>(TicketPriority.Medium, { validators: [Validators.required] }),
       location: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(200)] }),
-      address: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(300)] }),
+      locationAddress: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(300)] }),
       latitude: new FormControl<number | null>(null, { validators: [Validators.min(-90), Validators.max(90)] }),
       longitude: new FormControl<number | null>(null, { validators: [Validators.min(-180), Validators.max(180)] }),
-      reporterName: new FormControl('', { nonNullable: true, validators: [Validators.minLength(2), Validators.maxLength(80)] }),
-      reporterEmail: new FormControl('', { nonNullable: true, validators: [Validators.email, Validators.maxLength(254)] }),
+      reporterName: new FormControl(this.user?.displayName ?? '', { nonNullable: true, validators: [Validators.required, Validators.minLength(2), Validators.maxLength(80)] }),
       reporterPhone: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(30)] }),
+      reporterEmail: new FormControl('', { nonNullable: true, validators: [Validators.email, Validators.maxLength(254)] }),
     },
-    { validators: this.isAuthenticated ? [] : anonymousContactValidator },
+    { validators: reportValidator(!this.isAuthenticated) },
   );
 
   constructor() {
@@ -69,6 +80,7 @@ export class ReportProblemComponent {
 
   submit(): void {
     this.serverError.set(null);
+    this.successMessage.set(null);
     this.form.markAllAsTouched();
     if (this.form.invalid || this.submitting()) {
       return;
@@ -80,24 +92,27 @@ export class ReportProblemComponent {
       description: values.description.trim(),
       categoryId: values.categoryId as number,
       priority: values.priority,
-      location: values.location.trim() || null,
-      address: values.address.trim() || null,
+      locationAddress: values.locationAddress.trim() || null,
       latitude: values.latitude,
       longitude: values.longitude,
+      reporterName: values.reporterName.trim(),
+      reporterEmail: this.isAuthenticated ? null : values.reporterEmail.trim() || null,
+      reporterPhone: this.isAuthenticated ? null : values.reporterPhone.trim() || null,
     };
-
-    if (!this.isAuthenticated) {
-      request.reporterName = values.reporterName.trim() || null;
-      request.reporterEmail = values.reporterEmail.trim() || null;
-      request.reporterPhone = values.reporterPhone.trim() || null;
-    }
 
     this.submitting.set(true);
     this.tickets.create(request).subscribe({
       next: (ticket) => {
-        void this.router.navigate(['/tickets', ticket.id], {
-          queryParams: { ticketNumber: ticket.ticketNumber ?? '' },
-        });
+        if (this.isAuthenticated) {
+          void this.router.navigate(['/tickets', ticket.id], {
+            queryParams: { ticketNumber: ticket.ticketNumber ?? '' },
+          });
+          return;
+        }
+        this.submitting.set(false);
+        this.submittedTicketNumber.set(ticket.ticketNumber ?? null);
+        this.successMessage.set('Your report was submitted successfully. Keep the reference number below for follow-up.');
+        this.form.reset({ priority: TicketPriority.Medium });
       },
       error: (error: unknown) => {
         this.submitting.set(false);

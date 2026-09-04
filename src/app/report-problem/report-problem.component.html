@@ -14,11 +14,7 @@
         <h1>Report a problem</h1>
         <p class="intro">Tell us what happened and where it needs attention. You can follow up with the reference number after submitting.</p>
       </div>
-      @if (isAuthenticated) {
-        <span class="public-badge">Signed-in report</span>
-      } @else {
-        <span class="public-badge">Public form</span>
-      }
+      <span class="public-badge">{{ isAuthenticated ? 'Signed-in report' : 'Public form' }}</span>
     </div>
 
     <form class="report-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
@@ -66,12 +62,14 @@
         <h2>Where is it?</h2>
         <div class="field-grid">
           <label class="field"><span>Location <em>(optional)</em></span><input type="text" formControlName="location" maxlength="200" placeholder="Park, road, building or landmark" /></label>
-          <label class="field"><span>Address <em>(optional)</em></span><input type="text" formControlName="address" maxlength="300" placeholder="Street address or nearby landmark" /></label>
+          <label class="field"><span>Address <em>(required for urgent reports)</em></span><input type="text" formControlName="locationAddress" maxlength="300" placeholder="Street address or nearby landmark" /></label>
         </div>
+        @if (form.hasError('urgentLocation') && form.controls.priority.touched) { <p class="field-error">An address is required for urgent reports.</p> }
         <div class="field-grid">
-          <label class="field"><span>Latitude <em>(optional)</em></span><input type="number" formControlName="latitude" min="-90" max="90" step="any" placeholder="-90 to 90" />@if (form.controls.latitude.touched && form.controls.latitude.invalid) { <p class="field-error">Latitude must be between -90 and 90.</p> }</label>
-          <label class="field"><span>Longitude <em>(optional)</em></span><input type="number" formControlName="longitude" min="-180" max="180" step="any" placeholder="-180 to 180" />@if (form.controls.longitude.touched && form.controls.longitude.invalid) { <p class="field-error">Longitude must be between -180 and 180.</p> }</label>
+          <label class="field"><span>Latitude <em>(optional)</em></span><input type="number" formControlName="latitude" min="-90" max="90" step="any" placeholder="-90 to 90" /></label>
+          <label class="field"><span>Longitude <em>(optional)</em></span><input type="number" formControlName="longitude" min="-180" max="180" step="any" placeholder="-180 to 180" /></label>
         </div>
+        @if (form.touched && form.hasError('coordinatesTogether')) { <p class="field-error">Latitude and longitude must be provided together.</p> }
       </div>
 
       @if (isAuthenticated) {
@@ -82,16 +80,18 @@
       } @else {
         <div class="form-section contact-section">
           <h2>How can we reach you?</h2>
-          <p class="section-note">Because you are reporting anonymously, provide your name and at least one contact method.</p>
+          <p class="section-note">Provide your name and at least one contact method so we can follow up.</p>
           <div class="field-grid">
             <label class="field"><span>Name</span><input type="text" formControlName="reporterName" maxlength="80" autocomplete="name" />@if (form.controls.reporterName.touched && form.controls.reporterName.invalid) { <p class="field-error">Enter a name between 2 and 80 characters.</p> }</label>
             <label class="field"><span>Email <em>(optional if phone is provided)</em></span><input type="email" formControlName="reporterEmail" maxlength="254" autocomplete="email" />@if (form.controls.reporterEmail.touched && form.controls.reporterEmail.invalid) { <p class="field-error">Enter a valid email address.</p> }</label>
           </div>
-          <label class="field"><span>Phone <em>(optional if email is provided)</em></span><input type="tel" formControlName="reporterPhone" maxlength="30" autocomplete="tel" />@if (form.touched && form.hasError('anonymousContact')) { <p class="field-error">Provide your name and at least one of email or phone.</p> }</label>
+          <label class="field"><span>Phone <em>(optional if email is provided)</em></span><input type="tel" formControlName="reporterPhone" maxlength="30" autocomplete="tel" /></label>
+          @if (form.touched && form.hasError('anonymousContact')) { <p class="field-error">Provide at least one of email or phone.</p> }
         </div>
       }
 
       <div class="form-actions">
+        @if (successMessage()) { <p class="form-success">{{ successMessage() }} @if (submittedTicketNumber()) { <strong>Reference: {{ submittedTicketNumber() }}</strong> }</p> }
         @if (!isAuthenticated) { <a routerLink="/login">Sign in instead</a> }
         <button type="submit" class="primary-btn" [disabled]="submitting() || loadingCategories()">{{ submitting() ? 'Submitting report...' : 'Submit report' }}</button>
       </div>

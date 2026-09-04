@@ -28,6 +28,13 @@
       </dl>
     }
 
-    <div class="actions"><a routerLink="/report-problem" class="primary-btn">Report another problem</a><a routerLink="/login">Sign in</a></div>
+    <div class="actions">
+      <a routerLink="/report-problem" class="primary-btn">Report another problem</a>
+      @if (isAuthenticated) {
+        <a routerLink="/sessions">My account</a>
+      } @else {
+        <a routerLink="/login">Sign in</a>
+      }
+    </div>
   </section>
 </main>

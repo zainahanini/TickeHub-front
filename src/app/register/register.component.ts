@@ -23,10 +23,10 @@ export class RegisterComponent {
     {
       displayName: new FormControl('', {
         nonNullable: true,
-        validators: [Validators.required, Validators.minLength(2)],
+        validators: [Validators.required, Validators.minLength(2), Validators.maxLength(80)],
       }),
       email: new FormControl('', { nonNullable: true, validators: emailValidators }),
-      phone: new FormControl('', { nonNullable: true }),
+      phone: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(30)] }),
       password: new FormControl('', { nonNullable: true, validators: passwordValidators }),
       confirmPassword: new FormControl('', { nonNullable: true, validators: passwordValidators }),
     },
