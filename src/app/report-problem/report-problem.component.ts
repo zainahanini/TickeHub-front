@@ -9,6 +9,8 @@ import { CurrentUserService } from '../core/services/current-user.service';
 import { TokenService } from '../core/services/token.service';
 import { AttachmentService } from '../core/services/attachment.service';
 
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
 function reportValidator(anonymous: boolean): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const errors: ValidationErrors = {};
@@ -50,6 +52,7 @@ export class ReportProblemComponent {
   readonly submittedTicketNumber = signal<string | null>(null);
   readonly selectedFileName = signal<string | null>(null);
   readonly attachmentPending = signal(false);
+  readonly attachmentProgress = signal<number | null>(null);
   readonly priorities = Object.values(TicketPriority);
 
   readonly form = new FormGroup(
@@ -95,6 +98,12 @@ export class ReportProblemComponent {
       this.selectedFileName.set(null);
       return;
     }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      this.serverError.set('Please select an image smaller than 10 MB.');
+      input.value = '';
+      this.selectedFileName.set(null);
+      return;
+    }
     this.selectedFileName.set(file.name);
   }
 
@@ -128,11 +137,19 @@ export class ReportProblemComponent {
           const file = input?.files?.[0];
           if (file) {
             this.attachmentPending.set(true);
-            this.attachments.upload(ticket.id, file).subscribe({
-              next: () => this.navigateAfterCreation(ticket.id, ticket.ticketNumber),
+            this.attachmentProgress.set(0);
+            this.attachments.uploadWithProgress(ticket.id, file).subscribe({
+              next: (event) => {
+                if (event.state === 'progress') {
+                  this.attachmentProgress.set(event.progress);
+                  return;
+                }
+                this.navigateAfterCreation(ticket.id, ticket.ticketNumber);
+              },
               error: (error: unknown) => {
                 this.submitting.set(false);
                 this.attachmentPending.set(false);
+                this.attachmentProgress.set(null);
                 this.serverError.set(apiErrorMessage(error, 'The ticket was created, but the picture could not be uploaded.'));
               },
             });
@@ -155,6 +172,7 @@ export class ReportProblemComponent {
 
   private navigateAfterCreation(id: number, ticketNumber?: string): void {
     this.attachmentPending.set(false);
+    this.attachmentProgress.set(null);
     void this.router.navigate(['/tickets', id], {
       queryParams: { ticketNumber: ticketNumber ?? '' },
     });

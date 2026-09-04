@@ -10,6 +10,7 @@ import { UserType } from './core/models';
 import { ForgotPasswordComponent } from './forgot-password/forgot-password.component';
 import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
+import { ReportsDashboardComponent } from './reports/reports-dashboard.component';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 import { ReportProblemComponent } from './report-problem/report-problem.component';
 import { TicketDetailComponent } from './ticket-detail/ticket-detail.component';
@@ -43,6 +44,7 @@ export const routes: Routes = [
       { path: 'notifications', component: NotificationsComponent },
       { path: 'chat', loadComponent: () => import('./chat/chat.component').then((m) => m.ChatComponent) },
       { path: 'chat/:id', loadComponent: () => import('./chat/chat.component').then((m) => m.ChatComponent) },
+      { path: 'reports', component: ReportsDashboardComponent, canActivate: [roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
     ],
   },
   { path: '**', redirectTo: 'login' },

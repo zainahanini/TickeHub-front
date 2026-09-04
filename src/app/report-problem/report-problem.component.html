@@ -80,6 +80,9 @@
             {{ selectedFileName() || 'Choose an image' }}
             <input id="report-attachment" type="file" accept="image/*" (change)="selectAttachment($event)" [disabled]="submitting() || attachmentPending()" />
           </label>
+          @if (attachmentProgress() !== null) {
+            <progress max="100" [value]="attachmentProgress()"></progress>
+          }
         </div>
       }
 

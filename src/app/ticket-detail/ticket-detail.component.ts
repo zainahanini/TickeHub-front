@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Agent, Ticket, TicketHistoryEntry, TicketWorkflowAction, TicketPriority, UpdateTicketRequest, UserType } from '../core/models';
 import { TicketService } from '../core/services/ticket.service';
@@ -126,6 +127,7 @@ export class TicketDetailComponent {
       },
       error: (error: unknown) => {
         this.editError.set(apiErrorMessage(error, 'Could not update ticket status.'));
+        this.refreshAfterConflict(error);
         this.pendingAction.set(null);
       },
     });
@@ -148,7 +150,7 @@ export class TicketDetailComponent {
     this.editError.set(null);
     this.tickets.update(id, request).subscribe({
       next: (updated) => { this.ticket.set(updated); this.editPending.set(false); this.editingTicket.set(false); },
-      error: (error: unknown) => { this.editPending.set(false); this.editError.set(apiErrorMessage(error, 'Could not update the ticket. It may have changed.')); },
+      error: (error: unknown) => { this.editPending.set(false); this.editError.set(apiErrorMessage(error, 'Could not update the ticket. It may have changed.')); this.refreshAfterConflict(error); },
     });
   }
 
@@ -158,7 +160,7 @@ export class TicketDetailComponent {
     this.pendingAction.set('reopen');
     this.tickets.reopen(id, this.workflowReason.value.trim() || undefined, this.ticket()?.rowVersion).subscribe({
       next: (ticket) => { this.ticket.set(ticket); this.workflowReason.reset(''); this.loadWorkflow(id); this.loadHistory(id); this.pendingAction.set(null); },
-      error: (error: unknown) => { this.pendingAction.set(null); this.editError.set(apiErrorMessage(error, 'Could not reopen the ticket.')); },
+      error: (error: unknown) => { this.pendingAction.set(null); this.editError.set(apiErrorMessage(error, 'Could not reopen the ticket.')); this.refreshAfterConflict(error); },
     });
   }
 
@@ -293,5 +295,18 @@ export class TicketDetailComponent {
     this.tickets.history(id).subscribe({
       next: (history) => this.history.set(history),
     });
+  }
+
+  private refreshAfterConflict(error: unknown): void {
+    if (!(error instanceof HttpErrorResponse) || error.status !== 409) {
+      return;
+    }
+    const id = this.ticketId();
+    if (!id) {
+      return;
+    }
+    this.tickets.getById(id).subscribe({ next: (ticket) => this.ticket.set(ticket) });
+    this.loadWorkflow(id);
+    this.loadHistory(id);
   }
 }
