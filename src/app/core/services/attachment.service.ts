@@ -13,9 +13,12 @@ export class AttachmentService {
     return this.http.get<Attachment[]>(`${this.api}/tickets/${ticketId}/attachments`);
   }
 
-  upload(ticketId: number, file: File): Observable<Attachment> {
+  upload(ticketId: number, file: File, description?: string): Observable<Attachment> {
     const formData = new FormData();
     formData.append('file', file);
+    if (description?.trim()) {
+      formData.append('description', description.trim());
+    }
     return this.http.post<Attachment>(`${this.api}/tickets/${ticketId}/attachments`, formData);
   }
 

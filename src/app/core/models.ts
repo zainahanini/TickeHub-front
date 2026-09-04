@@ -52,6 +52,7 @@ export interface Agent {
 
 export interface TicketListItem {
   id: number;
+  ticketNumber?: string;
   title: string;
   status: TicketStatus;
   priority: TicketPriority;
@@ -60,7 +61,9 @@ export interface TicketListItem {
   createdByName: string;
   assignedAgentName: string | null;
   createdAt: string;
+  createdDate?: string;
   updatedAt: string;
+  categoryId?: number;
 }
 
 export interface Ticket {
@@ -72,6 +75,14 @@ export interface Ticket {
   priority: TicketPriority;
   categoryId: number;
   departmentId: number;
+  categoryName?: string;
+  departmentName?: string;
+  location?: string | null;
+  locationAddress?: string | null;
+  reporterName?: string | null;
+  reporterEmail?: string | null;
+  reporterPhone?: string | null;
+  assignedAgentName?: string | null;
   createdByUserId: number;
   assignedAgentId: number | null;
   createdAt: string;
@@ -101,6 +112,8 @@ export interface Comment {
   authorName: string;
   body: string;
   createdAt: string;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export interface Attachment {
@@ -110,6 +123,7 @@ export interface Attachment {
   contentType: string;
   sizeBytes: number;
   uploadedAt: string;
+  description?: string | null;
 }
 
 export interface Rating {
@@ -176,6 +190,35 @@ export interface TicketQuery {
   categoryId?: number;
   assignedAgentId?: number;
   search?: string;
+  sortBy?: string;
+  sortDescending?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PagedTickets {
+  items: TicketListItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface TicketWorkflowAction {
+  action?: string;
+  name?: string;
+  label?: string;
+  status?: TicketStatus;
+  toStatus?: TicketStatus;
+}
+
+export interface TicketHistoryEntry {
+  id?: number;
+  action?: string;
+  description?: string;
+  fromStatus?: TicketStatus | null;
+  toStatus?: TicketStatus | null;
+  changedByName?: string | null;
+  createdAt: string;
 }
 
 export interface ChatMessage {

@@ -5,27 +5,63 @@
       <div><strong>Palestine Civic Services</strong><span>Report tracking</span></div>
     </div>
 
-    @if (ticketNumber()) {
-      <div class="confirmation">
-        <p class="eyebrow">Report received</p>
-        <h1>Thank you for reporting this problem.</h1>
-        <p>Your reference number is:</p>
-        <strong class="reference">{{ ticketNumber() }}</strong>
-        <p class="confirmation-note">Keep this number for future follow-up.</p>
-      </div>
-    } @else {
-      <div class="heading"><p class="eyebrow">Ticket details</p><h1>Report status</h1></div>
-    }
+    <div class="heading"><p class="eyebrow">Ticket details</p><h1>{{ ticket()?.ticketNumber || ticketNumber() || 'Ticket' }}</h1></div>
 
     @if (loading()) { <p class="status-message">Loading report details...</p> }
     @if (error()) { <p class="form-error">{{ error() }}</p> }
     @if (ticket(); as currentTicket) {
       <dl class="ticket-summary">
+        <div><dt>Ticket number</dt><dd>{{ currentTicket.ticketNumber || '-' }}</dd></div>
         <div><dt>Title</dt><dd>{{ currentTicket.title }}</dd></div>
+        <div><dt>Category</dt><dd>{{ currentTicket.categoryName || currentTicket.categoryId }}</dd></div>
+        <div><dt>Department</dt><dd>{{ currentTicket.departmentName || currentTicket.departmentId }}</dd></div>
         <div><dt>Status</dt><dd>{{ currentTicket.status }}</dd></div>
         <div><dt>Priority</dt><dd>{{ currentTicket.priority }}</dd></div>
         <div><dt>Description</dt><dd>{{ currentTicket.description }}</dd></div>
+        <div><dt>Location</dt><dd>{{ currentTicket.locationAddress || currentTicket.location || '-' }}</dd></div>
+        <div><dt>Reporter</dt><dd>{{ currentTicket.reporterName || '-' }}{{ currentTicket.reporterEmail ? ' · ' + currentTicket.reporterEmail : '' }}</dd></div>
+        <div><dt>Created</dt><dd>{{ currentTicket.createdAt | date: 'medium' }}</dd></div>
+        <div><dt>Updated</dt><dd>{{ currentTicket.updatedAt | date: 'medium' }}</dd></div>
+        <div><dt>Assigned agent</dt><dd>{{ currentTicket.assignedAgentName || currentTicket.assignedAgentId || 'Unassigned' }}</dd></div>
       </dl>
+    }
+
+    @if (!workflowLoading() && workflow().length) {
+      <section class="workflow"><h2>Available actions</h2><div class="workflow-actions">@for (action of workflow(); track action.action || action.name || action.status) { <button type="button" [disabled]="!action.toStatus && !action.status || pendingAction()" (click)="applyWorkflowAction(action)">{{ pendingAction() === (action.action || action.name || action.toStatus || action.status) ? 'Updating...' : (action.label || action.name || action.action || action.toStatus || action.status) }}</button> }</div></section>
+    }
+    @if (history().length) {
+      <section class="history"><h2>History</h2><ol>@for (entry of history(); track entry.id || entry.createdAt) { <li><strong>{{ entry.action || entry.fromStatus + ' to ' + entry.toStatus }}</strong><span>{{ entry.description || entry.changedByName || '' }}</span><time>{{ entry.createdAt | date: 'medium' }}</time></li> }</ol></section>
+    }
+
+    @if (isAuthenticated) {
+    @if (interactionError()) { <p class="form-error">{{ interactionError() }}</p> }
+    <section class="interaction-section">
+      <h2>Comments</h2>
+      @if (commentsLoading()) { <p class="status-message">Loading comments...</p> }
+      @else if (comments().length === 0) { <p class="status-message">No comments yet.</p> }
+      @else { @for (comment of comments(); track comment.id) { <article class="comment"><div class="comment-head"><strong>{{ comment.authorName }}</strong><time>{{ comment.createdAt | date: 'medium' }}</time></div><p>{{ comment.body }}</p>@if (comment.canEdit || comment.canDelete) { <div class="comment-actions">@if (comment.canEdit) { <button type="button" (click)="beginCommentEdit(comment)">Edit</button> } @if (comment.canDelete) { <button type="button" (click)="deleteComment(comment)">Delete</button> }</div> }</article> } }
+      <form class="interaction-form" (submit)="$event.preventDefault(); editingCommentId() ? saveComment() : addComment()">
+        <label class="field"><span>{{ editingCommentId() ? 'Edit comment' : 'Add a comment' }}</span><textarea [formControl]="commentBody" maxlength="2000" rows="4" placeholder="Write a comment"></textarea></label>
+        @if (commentBody.touched && commentBody.invalid) { <p class="field-error">Comment is required and must be 1–2000 characters.</p> }
+        <div class="inline-actions"><button type="submit" class="primary-btn">{{ editingCommentId() ? 'Save comment' : 'Post comment' }}</button>@if (editingCommentId()) { <button type="button" class="secondary-btn" (click)="editingCommentId.set(null); commentBody.reset('')">Cancel</button> }</div>
+      </form>
+    </section>
+
+    <section class="interaction-section">
+      <h2>Attachments</h2>
+      @if (attachmentsLoading()) { <p class="status-message">Loading attachments...</p> }
+      @else if (attachments().length === 0) { <p class="status-message">No attachments.</p> }
+      @else { <ul class="attachment-list">@for (attachment of attachments(); track attachment.id) { <li><span><strong>{{ attachment.fileName }}</strong><small>{{ attachment.description || 'Attachment' }}</small></span><button type="button" class="secondary-btn" (click)="downloadAttachment(attachment)">Download</button></li> }</ul> }
+      <label class="field"><span>Description <em>(optional)</em></span><input type="text" [formControl]="attachmentDescription" maxlength="300" placeholder="What does this file show?" /></label>
+      @if (attachmentDescription.invalid && attachmentDescription.touched) { <p class="field-error">Description must be 300 characters or fewer.</p> }
+      <label class="upload-button">{{ uploadPending() ? 'Uploading...' : 'Choose a file to upload' }}<input type="file" [disabled]="uploadPending()" (change)="uploadAttachment($event)" /></label>
+    </section>
+
+    <section class="interaction-section rating-section">
+      <h2>Rate this service</h2>
+      @if (rating(); as existingRating) { <p class="status-message">You rated this ticket {{ existingRating.score }} out of 5.</p> }
+      @else { <div class="rating-options">@for (score of [1, 2, 3, 4, 5]; track score) { <label><input type="radio" [formControl]="ratingScore" [value]="score" /> <span>{{ score }}</span></label> }</div>@if (ratingScore.touched && ratingScore.invalid) { <p class="field-error">Choose a rating from 1 to 5.</p> }<label class="field"><span>Comment <em>(optional)</em></span><textarea [formControl]="ratingComment" maxlength="1000" rows="3" placeholder="Tell us about your experience"></textarea></label><button type="button" class="primary-btn" [disabled]="ratingPending()" (click)="submitRating()">{{ ratingPending() ? 'Submitting...' : 'Submit rating' }}</button> }
+    </section>
     }
 
     <div class="actions">
