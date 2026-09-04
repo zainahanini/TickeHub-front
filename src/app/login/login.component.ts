@@ -25,6 +25,10 @@ export class LoginComponent {
     password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
   });
 
+  openReportProblem(): void {
+    void this.router.navigate(['/report-problem']);
+  }
+
   submit(): void {
     this.serverError.set(null);
     this.form.markAllAsTouched();

@@ -21,6 +21,8 @@ const ANONYMOUS_AUTH_PATHS = [
   '/auth/refresh',
 ];
 
+const PUBLIC_API_PATHS = ['/categories/lookup'];
+
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   private readonly tokens = inject(TokenService);
@@ -50,7 +52,10 @@ export class AuthInterceptor implements HttpInterceptor {
   }
 
   private withAuthHeader(req: HttpRequest<unknown>): HttpRequest<unknown> {
-    if (ANONYMOUS_AUTH_PATHS.some((path) => req.url.includes(path))) {
+    if (
+      ANONYMOUS_AUTH_PATHS.some((path) => req.url.includes(path)) ||
+      PUBLIC_API_PATHS.some((path) => req.url.includes(path))
+    ) {
       return req;
     }
 
@@ -80,6 +85,15 @@ export class AuthInterceptor implements HttpInterceptor {
     if (req.context.get(SKIP_AUTH_REFRESH) || req.context.get(AUTH_RETRIED)) {
       return false;
     }
-    return !ANONYMOUS_AUTH_PATHS.some((path) => req.url.includes(path));
+    if (ANONYMOUS_AUTH_PATHS.some((path) => req.url.includes(path))) {
+      return false;
+    }
+    if (PUBLIC_API_PATHS.some((path) => req.url.includes(path))) {
+      return false;
+    }
+    if (req.url.endsWith('/tickets') && req.method === 'POST') {
+      return !this.tokens.accessToken && !this.tokens.refreshToken;
+    }
+    return true;
   }
 }

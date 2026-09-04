@@ -2,7 +2,7 @@
   <div class="municipal-brand">
     <div class="municipal-seal" aria-hidden="true">M</div>
     <div>
-      <strong>Municipality Services Portal</strong>
+      <strong>Palestine Civic Services</strong>
       <span>Citizen access</span>
     </div>
   </div>
@@ -37,6 +37,14 @@
       <a routerLink="/forgot-password">Forgot password?</a>
     </div>
   </form>
+
+  <button type="button" class="public-report" (click)="openReportProblem()">
+    <div>
+      <strong>Need to report an issue?</strong>
+      <span>Submit a problem without creating an account.</span>
+    </div>
+    <span class="report-link">Report a problem</span>
+  </button>
 
   <p class="meta">No account? <a routerLink="/register">Create one</a></p>
 </section>
