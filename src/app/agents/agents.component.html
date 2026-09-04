@@ -1,0 +1,111 @@
+<section class="panel">
+  <header>
+    <div>
+      <p class="eyebrow">Staff administration</p>
+      <h1>Agent directory</h1>
+      <p>Manage support agents, departments, and availability.</p>
+    </div>
+    @if (isAdmin) {
+      <button type="button" class="primary-action" (click)="beginCreate()">New agent</button>
+    }
+  </header>
+
+  @if (error()) {
+    <p class="banner error">{{ error() }}</p>
+  }
+
+  @if (creating()) {
+    <form class="create-form" (submit)="$event.preventDefault(); create()">
+      <label>
+        User id
+        <input type="number" min="1" required [(ngModel)]="createDraft.userId" name="createUserId" />
+      </label>
+      <label>
+        First name
+        <input required maxlength="80" [(ngModel)]="createDraft.firstName" name="createFirstName" />
+      </label>
+      <label>
+        Last name
+        <input required maxlength="80" [(ngModel)]="createDraft.lastName" name="createLastName" />
+      </label>
+      <label>
+        Department
+        <select required [(ngModel)]="createDraft.departmentId" name="createDepartmentId">
+          @for (department of departments(); track department.id) {
+            <option [ngValue]="department.id">{{ department.name }}</option>
+          }
+        </select>
+      </label>
+      <label class="check">
+        <input type="checkbox" [(ngModel)]="createDraft.isAvailable" name="createIsAvailable" />
+        Available
+      </label>
+      <div class="actions">
+        <button type="submit" [disabled]="pendingId() === 0">Create</button>
+        <button type="button" (click)="creating.set(false)">Cancel</button>
+      </div>
+    </form>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading agents...</p>
+  } @else if (!agents().length) {
+    <p class="muted">No agents found.</p>
+  } @else {
+    <div class="agent-grid">
+      @for (agent of agents(); track agent.id) {
+        <article class="agent-card">
+          <div class="agent-heading">
+            <div>
+              <h2><a [routerLink]="['/agent/agents', agent.id]">{{ agent.firstName }} {{ agent.lastName }}</a></h2>
+              <p>{{ agent.email }}</p>
+            </div>
+            <span class="badge" [class.offline]="!agent.isAvailable">{{ agent.isAvailable ? 'Available' : 'Unavailable' }}</span>
+          </div>
+
+          @if (editingId() === agent.id) {
+            <label>
+              First name
+              <input [(ngModel)]="draft.firstName" name="firstName-{{ agent.id }}" />
+            </label>
+            <label>
+              Last name
+              <input [(ngModel)]="draft.lastName" name="lastName-{{ agent.id }}" />
+            </label>
+            <label>
+              Department
+              <select [(ngModel)]="draft.departmentId" name="department-{{ agent.id }}">
+                @for (department of departments(); track department.id) {
+                  <option [ngValue]="department.id">{{ department.name }}</option>
+                }
+              </select>
+            </label>
+            <label class="check">
+              <input type="checkbox" [(ngModel)]="draft.isAvailable" name="available-{{ agent.id }}" />
+              Available
+            </label>
+            <div class="actions">
+              <button type="button" (click)="save(agent)" [disabled]="pendingId() === agent.id">Save</button>
+              <button type="button" (click)="editingId.set(null)">Cancel</button>
+            </div>
+          } @else {
+            <dl>
+              <div><dt>Department</dt><dd>{{ agent.departmentName || 'Department unavailable' }}</dd></div>
+              <div><dt>Open tickets</dt><dd>{{ agent.openTicketCount ?? 0 }}{{ agent.capacity !== undefined ? ' / ' + agent.capacity : '' }}</dd></div>
+              <div><dt>Skills</dt><dd>{{ skillText(agent) }}</dd></div>
+            </dl>
+            <div class="actions">
+              <a [routerLink]="['/agent/agents', agent.id]">Details</a>
+              @if (isSupervisor || isAdmin) {
+                <button type="button" (click)="beginEdit(agent)">Edit</button>
+              }
+              @if (isAdmin) {
+                <button type="button" class="danger" (click)="remove(agent)">Delete</button>
+              }
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,89 @@
+<section class="panel">
+  <header>
+    <div>
+      <p class="eyebrow">{{ isProfileRoute ? 'Staff profile' : 'Agent details' }}</p>
+      <h1>{{ agent() ? agent()!.firstName + ' ' + agent()!.lastName : 'Agent' }}</h1>
+    </div>
+    <a routerLink="/agent/agents">Directory</a>
+  </header>
+
+  @if (error()) {
+    <p class="banner error">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="banner success">{{ message() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading agent...</p>
+  } @else if (agent(); as current) {
+    <div class="detail-grid">
+      <section class="summary">
+        <h2>Overview</h2>
+        <dl>
+          <div><dt>Email</dt><dd>{{ current.email }}</dd></div>
+          <div><dt>Department</dt><dd>{{ current.departmentName || current.departmentId }}</dd></div>
+          <div><dt>Status</dt><dd>{{ current.isAvailable ? 'Available' : 'Unavailable' }}</dd></div>
+          <div><dt>Open tickets</dt><dd>{{ current.openTicketCount ?? 0 }}{{ current.capacity !== undefined ? ' / ' + current.capacity : '' }}</dd></div>
+          <div><dt>Skills</dt><dd>{{ skillText(current) }}</dd></div>
+        </dl>
+      </section>
+
+      @if (isSupervisor || isAdmin) {
+        <form class="form-panel" (submit)="$event.preventDefault(); saveManagement()">
+          <h2>Management</h2>
+          <label>
+            First name
+            <input required maxlength="80" [(ngModel)]="managementDraft.firstName" name="managementFirstName" />
+          </label>
+          <label>
+            Last name
+            <input required maxlength="80" [(ngModel)]="managementDraft.lastName" name="managementLastName" />
+          </label>
+          <label>
+            Department
+            <select required [(ngModel)]="managementDraft.departmentId" name="managementDepartmentId">
+              @for (department of departments(); track department.id) {
+                <option [ngValue]="department.id">{{ department.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="check">
+            <input type="checkbox" [(ngModel)]="managementDraft.isAvailable" name="managementIsAvailable" />
+            Available
+          </label>
+          <div class="actions">
+            <button type="submit" [disabled]="pending()">Save management changes</button>
+            @if (isAdmin) {
+              <button type="button" class="danger" [disabled]="pending()" (click)="deleteAgent()">Delete agent</button>
+            }
+          </div>
+        </form>
+      }
+
+      @if (isProfileRoute) {
+        <form class="form-panel" (submit)="$event.preventDefault(); saveProfile()">
+          <h2>Profile</h2>
+          <label>
+            First name
+            <input required maxlength="80" [(ngModel)]="profileDraft.firstName" name="profileFirstName" />
+          </label>
+          <label>
+            Last name
+            <input required maxlength="80" [(ngModel)]="profileDraft.lastName" name="profileLastName" />
+          </label>
+          <fieldset>
+            <legend>Skills</legend>
+            @for (skill of skills(); track skill.id) {
+              <label class="check">
+                <input type="checkbox" [checked]="hasSkill(skill.id)" (change)="toggleSkill(skill.id, $any($event.target).checked)" />
+                {{ skill.name }}
+              </label>
+            }
+          </fieldset>
+          <button type="submit" [disabled]="pending()">Save profile</button>
+        </form>
+      }
+    </div>
+  }
+</section>

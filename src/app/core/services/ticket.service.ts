@@ -83,7 +83,6 @@ export class TicketService {
   }
 
   assign(id: number, agentId: number): Observable<Ticket> {
-  assign(id: number, agentId: number): Observable<Ticket> {
     return this.http.patch<Ticket>(`${this.base}/${id}/assign`, { agentId });
   }
 
