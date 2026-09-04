@@ -276,11 +276,37 @@ export interface TicketHistoryEntry {
 
 export interface ChatMessage {
   id: number;
+  conversationId?: number;
   ticketId: number;
   senderUserId: number;
   senderName: string;
   body: string;
   sentAt: string;
+  isMine?: boolean;
+}
+
+export interface ChatConversation {
+  id: number;
+  ticketId?: number | null;
+  ticketNumber?: string | null;
+  title?: string | null;
+  subject?: string | null;
+  participantName?: string | null;
+  lastMessagePreview?: string | null;
+  lastMessageAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  unreadCount?: number;
+}
+
+export interface CreateConversationRequest {
+  ticketId?: number | null;
+  subject?: string | null;
+  participantUserId?: number | null;
+}
+
+export interface SendChatMessageRequest {
+  body: string;
 }
 
 export interface AppNotification {
@@ -312,4 +338,29 @@ export interface AgentPerformance {
   openTickets: number;
   resolvedTickets: number;
   averageResolutionHours: number;
+}
+
+export interface TicketStatistics {
+  openTickets: number;
+  overdueTickets: number;
+  unassignedTickets: number;
+}
+
+export interface CategorySatisfaction {
+  categoryId?: number;
+  categoryName: string;
+  averageScore: number;
+  responseCount: number;
+}
+
+export interface DailyVolume {
+  date: string;
+  createdCount: number;
+  resolvedCount: number;
+}
+
+export interface ReportFilters {
+  from?: string | null;
+  to?: string | null;
+  departmentId?: number | null;
 }

@@ -41,6 +41,8 @@ export const routes: Routes = [
       { path: 'sessions', component: SessionsComponent },
       { path: 'change-password', component: ChangePasswordComponent },
       { path: 'notifications', component: NotificationsComponent },
+      { path: 'chat', loadComponent: () => import('./chat/chat.component').then((m) => m.ChatComponent) },
+      { path: 'chat/:id', loadComponent: () => import('./chat/chat.component').then((m) => m.ChatComponent) },
     ],
   },
   { path: '**', redirectTo: 'login' },

@@ -1,0 +1,87 @@
+<section class="chat-shell">
+  <aside class="conversation-panel">
+    <header>
+      <div>
+        <p class="eyebrow">Messages</p>
+        <h1>Chat</h1>
+      </div>
+    </header>
+
+    @if (error()) {
+      <p class="banner">{{ error() }}</p>
+    }
+
+    <form class="new-conversation" (submit)="$event.preventDefault(); createConversation()">
+      <input [formControl]="subject" maxlength="160" placeholder="New conversation subject" />
+      <button type="submit" [disabled]="creating()">{{ creating() ? 'Creating...' : 'New' }}</button>
+    </form>
+
+    @if (loadingConversations()) {
+      <p class="muted">Loading conversations...</p>
+    } @else if (!conversations().length) {
+      <p class="muted">No conversations yet.</p>
+    } @else {
+      <nav class="conversation-list" aria-label="Conversations">
+        @for (conversation of conversations(); track conversation.id) {
+          <button type="button" [class.active]="activeConversation()?.id === conversation.id" (click)="selectConversation(conversation)">
+            <span>
+              <strong>{{ title(conversation) }}</strong>
+              <small>{{ conversation.lastMessagePreview || conversation.participantName || 'Open conversation' }}</small>
+            </span>
+            <span class="meta">
+              @if (timestamp(conversation)) {
+                <time>{{ timestamp(conversation) | date: 'short' }}</time>
+              }
+              @if ((conversation.unreadCount ?? 0) > 0) {
+                <b>{{ conversation.unreadCount }}</b>
+              }
+            </span>
+          </button>
+        }
+      </nav>
+    }
+  </aside>
+
+  <section class="message-panel">
+    @if (activeConversation(); as active) {
+      <header>
+        <div>
+          <p class="eyebrow">Conversation</p>
+          <h2>{{ title(active) }}</h2>
+        </div>
+        @if (active.ticketId) {
+          <a [routerLink]="['/tickets', active.ticketId]">View ticket</a>
+        }
+      </header>
+
+      <div class="messages">
+        @if (loadingMessages()) {
+          <p class="muted">Loading messages...</p>
+        } @else if (!messages().length) {
+          <p class="muted">No messages in this conversation yet.</p>
+        } @else {
+          @for (message of messages(); track message.id) {
+            <article class="message" [class.mine]="isMine(message)">
+              <div>
+                <strong>{{ isMine(message) ? 'You' : message.senderName }}</strong>
+                <time>{{ message.sentAt | date: 'short' }}</time>
+              </div>
+              <p>{{ message.body }}</p>
+            </article>
+          }
+        }
+      </div>
+
+      <form class="message-form" (submit)="$event.preventDefault(); send()">
+        <textarea [formControl]="messageBody" maxlength="2000" rows="3" placeholder="Write a message"></textarea>
+        <button type="submit" [disabled]="sending()">{{ sending() ? 'Sending...' : 'Send' }}</button>
+      </form>
+    } @else {
+      <div class="empty-state">
+        <p class="eyebrow">Conversation</p>
+        <h2>Select a conversation</h2>
+        <p>Open an existing conversation or start a new one.</p>
+      </div>
+    }
+  </section>
+</section>

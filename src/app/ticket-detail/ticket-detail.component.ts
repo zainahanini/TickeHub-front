@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Agent, Ticket, TicketHistoryEntry, TicketWorkflowAction, TicketPriority, UpdateTicketRequest, UserType } from '../core/models';
 import { TicketService } from '../core/services/ticket.service';
 import { CurrentUserService } from '../core/services/current-user.service';
@@ -13,6 +13,7 @@ import { AttachmentService } from '../core/services/attachment.service';
 import { CategoryService } from '../core/services/category.service';
 import { Category } from '../core/models';
 import { AgentService } from '../core/services/agent.service';
+import { ChatService } from '../core/services/chat.service';
 
 @Component({
   selector: 'app-ticket-detail',
@@ -23,6 +24,7 @@ import { AgentService } from '../core/services/agent.service';
 })
 export class TicketDetailComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly tickets = inject(TicketService);
   private readonly currentUser = inject(CurrentUserService);
   private readonly tokens = inject(TokenService);
@@ -30,6 +32,7 @@ export class TicketDetailComponent {
   private readonly attachmentsService = inject(AttachmentService);
   private readonly categoriesService = inject(CategoryService);
   private readonly agentService = inject(AgentService);
+  private readonly chatService = inject(ChatService);
 
   readonly isAuthenticated = !!this.currentUser.snapshot() || !!this.tokens.accessToken || !!this.tokens.refreshToken;
   readonly ticket = signal<Ticket | null>(null);
@@ -57,6 +60,7 @@ export class TicketDetailComponent {
   readonly canAssign = this.currentUser.snapshot()?.userType === UserType.Supervisor || this.currentUser.snapshot()?.userType === UserType.Admin;
   readonly agents = signal<Agent[]>([]);
   readonly assignmentPending = signal(false);
+  readonly chatPending = signal(false);
   readonly selectedAgentId = new FormControl<number | null>(null);
   readonly internalComment = new FormControl(false, { nonNullable: true });
   readonly editingTicket = signal(false);
@@ -255,6 +259,23 @@ export class TicketDetailComponent {
     this.commentsService.getByTicket(id).subscribe({ next: (comments) => { this.comments.set(comments); this.commentsLoading.set(false); }, error: () => this.commentsLoading.set(false) });
     this.attachmentsService.getByTicket(id).subscribe({ next: (attachments) => { this.attachments.set(attachments); this.attachmentsLoading.set(false); }, error: () => this.attachmentsLoading.set(false) });
     this.tickets.getRating(id).subscribe({ next: (rating) => this.rating.set(rating) });
+  }
+
+  messageAgent(): void {
+    const id = this.ticketId();
+    if (!id || this.chatPending()) return;
+    this.chatPending.set(true);
+    this.interactionError.set(null);
+    this.chatService.ticketConversation(id).subscribe({
+      next: (conversation) => {
+        this.chatPending.set(false);
+        void this.router.navigate(['/chat', conversation.id]);
+      },
+      error: (error: unknown) => {
+        this.interactionError.set(apiErrorMessage(error, 'Could not open chat for this ticket.'));
+        this.chatPending.set(false);
+      },
+    });
   }
 
   private loadWorkflow(id: number): void {

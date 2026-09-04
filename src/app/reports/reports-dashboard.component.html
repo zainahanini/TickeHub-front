@@ -1,0 +1,99 @@
+<section class="dashboard">
+  <header class="panel-head">
+    <div>
+      <p class="eyebrow">Reports</p>
+      <h1>Reports dashboard</h1>
+      <p>Operational statistics from the backend reporting endpoints.</p>
+    </div>
+  </header>
+
+  <form class="filters" (submit)="$event.preventDefault(); load()">
+    <label>
+      From
+      <input type="date" [formControl]="from" />
+    </label>
+    <label>
+      To
+      <input type="date" [formControl]="to" />
+    </label>
+    <label>
+      Department
+      <select [formControl]="departmentId">
+        <option value="">All departments</option>
+        @for (department of departments(); track department.id) {
+          <option [value]="department.id">{{ department.name }}</option>
+        }
+      </select>
+    </label>
+    <button type="submit" [disabled]="loading()">Apply</button>
+    <button type="button" class="secondary" [disabled]="loading()" (click)="reset()">Reset</button>
+  </form>
+
+  @if (error()) {
+    <p class="banner">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading reports...</p>
+  } @else {
+    @if (statistics(); as stats) {
+      <section class="metric-grid" aria-label="Ticket statistics">
+        <article>
+          <span>Open tickets</span>
+          <strong>{{ stats.openTickets }}</strong>
+        </article>
+        <article>
+          <span>Overdue tickets</span>
+          <strong>{{ stats.overdueTickets }}</strong>
+        </article>
+        <article>
+          <span>Unassigned tickets</span>
+          <strong>{{ stats.unassignedTickets }}</strong>
+        </article>
+      </section>
+    }
+
+    <section class="report-section">
+      <h2>Category satisfaction</h2>
+      @if (!satisfaction().length) {
+        <p class="muted">No satisfaction data for this range.</p>
+      } @else {
+        <div class="table">
+          @for (item of satisfaction(); track item.categoryId ?? item.categoryName) {
+            <div class="row satisfaction-row">
+              <span>{{ item.categoryName }}</span>
+              <div class="bar"><i [style.width]="satisfactionWidth(item)"></i></div>
+              <strong>{{ satisfactionScore(item) | number: '1.1-1' }}/5</strong>
+              <small>{{ satisfactionCount(item) }} responses</small>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="report-section">
+      <h2>Daily created vs resolved</h2>
+      @if (!dailyVolume().length) {
+        <p class="muted">No volume data for this range.</p>
+      } @else {
+        <div class="volume-table">
+          @for (item of dailyVolume(); track item.date) {
+            <div class="volume-row">
+              <time>{{ item.date | date: 'MMM d' }}</time>
+              <div>
+                <span>Created</span>
+                <b class="created" [style.width]="volumeWidth(createdCount(item))"></b>
+                <strong>{{ createdCount(item) }}</strong>
+              </div>
+              <div>
+                <span>Resolved</span>
+                <b class="resolved" [style.width]="volumeWidth(resolvedCount(item))"></b>
+                <strong>{{ resolvedCount(item) }}</strong>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+</section>

@@ -97,6 +97,9 @@
 
     <div class="actions">
       <a routerLink="/report-problem" class="primary-btn">Report another problem</a>
+      @if (isAuthenticated && ticket()) {
+        <button type="button" class="secondary-btn" [disabled]="chatPending()" (click)="messageAgent()">{{ chatPending() ? 'Opening chat...' : 'Message the agent' }}</button>
+      }
       @if (isAuthenticated) {
         <a routerLink="/sessions">My account</a>
       } @else {
