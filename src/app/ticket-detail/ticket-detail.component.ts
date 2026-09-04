@@ -55,7 +55,7 @@ export class TicketDetailComponent {
   readonly ratingPending = signal(false);
   readonly priorities = Object.values(TicketPriority);
   readonly categories = signal<Category[]>([]);
-  readonly isStaff = this.currentUser.snapshot()?.userType === UserType.Agent || this.currentUser.snapshot()?.userType === UserType.Admin;
+  readonly isStaff = this.currentUser.snapshot()?.userType === UserType.Agent || this.currentUser.snapshot()?.userType === UserType.Supervisor || this.currentUser.snapshot()?.userType === UserType.Admin;
   readonly canAssign = this.currentUser.snapshot()?.userType === UserType.Supervisor || this.currentUser.snapshot()?.userType === UserType.Admin;
   readonly agents = signal<Agent[]>([]);
   readonly assignmentPending = signal(false);
@@ -97,16 +97,8 @@ export class TicketDetailComponent {
         this.error.set(apiErrorMessage(error, 'The ticket details could not be loaded.'));
       },
     });
-    this.tickets.workflow(id).subscribe({
-      next: (workflow) => {
-        this.workflow.set(Array.isArray(workflow) ? workflow : workflow.allowedActions ?? []);
-        this.workflowLoading.set(false);
-      },
-      error: () => this.workflowLoading.set(false),
-    });
-    this.tickets.history(id).subscribe({
-      next: (history) => this.history.set(history),
-    });
+    this.loadWorkflow(id);
+    this.loadHistory(id);
     this.loadInteractions(id);
   }
 
@@ -125,9 +117,15 @@ export class TicketDetailComponent {
     this.tickets.updateStatus(id, { newStatus: targetStatus, reason: this.workflowReason.value.trim() || null, rowVersion: this.ticket()?.rowVersion }).subscribe({
       next: (ticket) => {
         this.ticket.set(ticket);
+        this.workflowReason.reset('');
+        this.loadWorkflow(id);
+        this.loadHistory(id);
         this.pendingAction.set(null);
       },
-      error: () => this.pendingAction.set(null),
+      error: (error: unknown) => {
+        this.editError.set(apiErrorMessage(error, 'Could not update ticket status.'));
+        this.pendingAction.set(null);
+      },
     });
   }
 
@@ -157,7 +155,7 @@ export class TicketDetailComponent {
     if (!id || !this.ticket() || this.pendingAction()) return;
     this.pendingAction.set('reopen');
     this.tickets.reopen(id, this.workflowReason.value.trim() || undefined, this.ticket()?.rowVersion).subscribe({
-      next: (ticket) => { this.ticket.set(ticket); this.pendingAction.set(null); },
+      next: (ticket) => { this.ticket.set(ticket); this.workflowReason.reset(''); this.loadWorkflow(id); this.loadHistory(id); this.pendingAction.set(null); },
       error: (error: unknown) => { this.pendingAction.set(null); this.editError.set(apiErrorMessage(error, 'Could not reopen the ticket.')); },
     });
   }
@@ -271,5 +269,22 @@ export class TicketDetailComponent {
     this.commentsService.getByTicket(id).subscribe({ next: (comments) => { this.comments.set(comments); this.commentsLoading.set(false); }, error: () => this.commentsLoading.set(false) });
     this.attachmentsService.getByTicket(id).subscribe({ next: (attachments) => { this.attachments.set(attachments); this.attachmentsLoading.set(false); }, error: () => this.attachmentsLoading.set(false) });
     this.tickets.getRating(id).subscribe({ next: (rating) => this.rating.set(rating) });
+  }
+
+  private loadWorkflow(id: number): void {
+    this.workflowLoading.set(true);
+    this.tickets.workflow(id).subscribe({
+      next: (workflow) => {
+        this.workflow.set(Array.isArray(workflow) ? workflow : workflow.allowedActions ?? []);
+        this.workflowLoading.set(false);
+      },
+      error: () => this.workflowLoading.set(false),
+    });
+  }
+
+  private loadHistory(id: number): void {
+    this.tickets.history(id).subscribe({
+      next: (history) => this.history.set(history),
+    });
   }
 }

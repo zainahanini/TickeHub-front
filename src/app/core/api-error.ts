@@ -34,8 +34,21 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
     }
   }
 
-  if (error.status === 401) {
-    return 'Invalid email or password.';
+  switch (error.status) {
+    case 400:
+      return 'Please check the information and try again.';
+    case 401:
+      return 'Please sign in again.';
+    case 403:
+      return 'You do not have permission to do that.';
+    case 404:
+      return 'The requested item could not be found.';
+    case 409:
+      return 'This item changed while you were working. Refresh and try again.';
+    case 413:
+      return 'That upload is too large. Choose a smaller file.';
+    default:
+      break;
   }
 
   return fallback;

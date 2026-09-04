@@ -20,7 +20,7 @@ export class ChangePasswordComponent {
 
   readonly form = new FormGroup(
     {
-      currentPassword: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+      currentPassword: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(128)] }),
       newPassword: new FormControl('', { nonNullable: true, validators: passwordValidators }),
       confirmPassword: new FormControl('', { nonNullable: true, validators: passwordValidators }),
     },

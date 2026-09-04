@@ -16,6 +16,7 @@ export enum TicketPriority {
 export enum UserType {
   Citizen = 'Citizen',
   Agent = 'Agent',
+  Supervisor = 'Supervisor',
   Admin = 'Admin',
 }
 
@@ -48,6 +49,36 @@ export interface Agent {
   email: string;
   departmentId: number;
   isAvailable: boolean;
+  openTicketCount?: number;
+  capacity?: number;
+  departmentName?: string;
+  skills?: Array<string | AgentSkill>;
+}
+
+export interface AgentSkill {
+  id: number;
+  name: string;
+}
+
+export interface CreateAgentRequest {
+  userId: number;
+  departmentId: number;
+  firstName: string;
+  lastName: string;
+  isAvailable?: boolean;
+}
+
+export interface UpdateAgentRequest {
+  departmentId: number;
+  firstName: string;
+  lastName: string;
+  isAvailable: boolean;
+}
+
+export interface UpdateAgentProfileRequest {
+  firstName: string;
+  lastName: string;
+  skills: number[];
 }
 
 export interface TicketListItem {
@@ -87,6 +118,7 @@ export interface Ticket {
   assignedAgentId: number | null;
   createdAt: string;
   updatedAt: string;
+  rowVersion?: string;
   comments?: Comment[];
   attachments?: Attachment[];
   rating?: Rating | null;
@@ -114,6 +146,7 @@ export interface Comment {
   createdAt: string;
   canEdit?: boolean;
   canDelete?: boolean;
+  isInternal?: boolean;
 }
 
 export interface Attachment {
@@ -194,6 +227,25 @@ export interface TicketQuery {
   sortDescending?: boolean;
   page?: number;
   pageSize?: number;
+  unassigned?: boolean;
+  overdue?: boolean;
+}
+
+export interface UpdateTicketRequest {
+  title: string;
+  description: string;
+  categoryId: number;
+  priority: TicketPriority;
+  locationAddress?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  rowVersion?: string | null;
+}
+
+export interface ChangeTicketStatusRequest {
+  newStatus: TicketStatus;
+  reason?: string | null;
+  rowVersion?: string | null;
 }
 
 export interface PagedTickets {
@@ -209,6 +261,7 @@ export interface TicketWorkflowAction {
   label?: string;
   status?: TicketStatus;
   toStatus?: TicketStatus;
+  reasonRequired?: boolean;
 }
 
 export interface TicketHistoryEntry {

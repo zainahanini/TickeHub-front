@@ -7,6 +7,15 @@
       }
     </div>
     <nav>
+      @if (user()?.userType === 'Agent' || user()?.userType === 'Supervisor' || user()?.userType === 'Admin') {
+        <a routerLink="/agent/tickets" routerLinkActive="active">Staff tickets</a>
+        <a routerLink="/agent/profile" routerLinkActive="active">Staff profile</a>
+      }
+      @if (user()?.userType === 'Supervisor' || user()?.userType === 'Admin') {
+        <a routerLink="/agent/agents" routerLinkActive="active">Agents</a>
+      }
+      <a routerLink="/notifications" routerLinkActive="active">Notifications @if (unreadCount() > 0) { <span class="notification-badge">{{ unreadCount() }}</span> }</a>
+      <a routerLink="/tickets" routerLinkActive="active">My tickets</a>
       <a routerLink="/report-problem" routerLinkActive="active">Report a problem</a>
       <a routerLink="/sessions" routerLinkActive="active">My sessions</a>
       <a routerLink="/change-password" routerLinkActive="active">Change password</a>

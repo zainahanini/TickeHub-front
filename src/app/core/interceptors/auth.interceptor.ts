@@ -93,10 +93,10 @@ export class AuthInterceptor implements HttpInterceptor {
       return false;
     }
     if (PUBLIC_API_PATHS.some((path) => req.url.includes(path))) {
-      return !this.hasSession();
+      return false;
     }
     if (req.url.endsWith('/tickets') && req.method === 'POST') {
-      return !this.tokens.accessToken && !this.tokens.refreshToken;
+      return false;
     }
     return true;
   }
