@@ -1,0 +1,62 @@
+.panel {
+  max-width: 460px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 28px 24px;
+  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.06);
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 1.7rem;
+}
+
+.lede,
+.muted {
+  margin: 0 0 22px;
+  color: #5c5c5c;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid #dfe6df;
+  border-radius: 8px;
+  background: #fafcfb;
+  padding: 12px 14px;
+  color: #111111;
+  font: inherit;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: #007a3d;
+  box-shadow: 0 0 0 3px rgba(0, 122, 61, 0.1);
+}
+
+.primary-btn {
+  border: none;
+  border-radius: 8px;
+  background: #007a3d;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  padding: 12px 18px;
+  cursor: pointer;
+  width: 100%;
+}

@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { AccountShellComponent } from './account/account-shell.component';
 import { ChangePasswordComponent } from './account/change-password.component';
+import { ProfileComponent } from './account/profile.component';
 import { SessionsComponent } from './account/sessions.component';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
@@ -24,7 +25,6 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   { path: 'report-problem', component: ReportProblemComponent, canMatch: [publicReportGuard] },
   { path: 'tickets/:id', component: TicketDetailComponent, canActivate: [authGuard] },
-  { path: 'agent/tickets', component: AgentTicketsComponent, canActivate: [authGuard, roleGuard], data: { roles: [UserType.Agent, UserType.Supervisor, UserType.Admin] } },
   { path: 'agent/profile', component: AgentDetailComponent, canActivate: [authGuard, roleGuard], data: { roles: [UserType.Agent, UserType.Supervisor, UserType.Admin] } },
   { path: 'agent/agents', component: AgentsComponent, canActivate: [authGuard, roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
   { path: 'agent/agents/:id', component: AgentDetailComponent, canActivate: [authGuard, roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
@@ -39,6 +39,13 @@ export const routes: Routes = [
     children: [
       { path: 'tickets', component: TicketsComponent },
       { path: 'report-problem', component: ReportProblemComponent },
+      { path: 'profile', component: ProfileComponent },
+      {
+        path: 'agent',
+        children: [
+          { path: 'tickets', component: AgentTicketsComponent, canActivate: [roleGuard], data: { roles: [UserType.Agent, UserType.Supervisor, UserType.Admin] } },
+        ],
+      },
       { path: 'sessions', component: SessionsComponent },
       { path: 'change-password', component: ChangePasswordComponent },
       { path: 'notifications', component: NotificationsComponent },

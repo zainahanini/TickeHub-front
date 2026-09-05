@@ -150,7 +150,13 @@ export class TicketDetailComponent {
     this.editError.set(null);
     this.tickets.update(id, request).subscribe({
       next: (updated) => { this.ticket.set(updated); this.editPending.set(false); this.editingTicket.set(false); },
-      error: (error: unknown) => { this.editPending.set(false); this.editError.set(apiErrorMessage(error, 'Could not update the ticket. It may have changed.')); this.refreshAfterConflict(error); },
+      error: (error: unknown) => {
+        this.editPending.set(false);
+        this.editError.set(error instanceof HttpErrorResponse && error.status === 409
+          ? 'Another user edited this ticket first. The latest ticket details have been reloaded.'
+          : apiErrorMessage(error, 'Could not update the ticket.'));
+        this.refreshAfterConflict(error);
+      },
     });
   }
 

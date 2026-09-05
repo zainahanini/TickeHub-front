@@ -1,0 +1,37 @@
+<section class="panel">
+  <h1>My profile</h1>
+  <p class="lede">Update the account details shown in TicketHub.</p>
+
+  @if (error()) {
+    <p class="form-error">{{ error() }}</p>
+  }
+  @if (success()) {
+    <p class="form-success">Profile updated.</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading profile...</p>
+  } @else {
+    <form class="auth-form" [formGroup]="form" (ngSubmit)="save()">
+      <label class="field">
+        <span>Display name</span>
+        <input type="text" formControlName="displayName" maxlength="80" autocomplete="name" />
+        @if (form.controls.displayName.touched && form.controls.displayName.invalid) {
+          <p class="field-error">Enter a display name between 2 and 80 characters.</p>
+        }
+      </label>
+
+      <label class="field">
+        <span>Phone <em>(optional)</em></span>
+        <input type="tel" formControlName="phone" maxlength="30" autocomplete="tel" />
+        @if (form.controls.phone.touched && form.controls.phone.invalid) {
+          <p class="field-error">Phone must be 30 characters or fewer.</p>
+        }
+      </label>
+
+      <button type="submit" class="primary-btn" [disabled]="saving()">
+        {{ saving() ? 'Saving...' : 'Save profile' }}
+      </button>
+    </form>
+  }
+</section>

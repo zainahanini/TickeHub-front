@@ -60,31 +60,13 @@
 
       <div class="form-section">
         <h2>Where is it?</h2>
-        <div class="field-grid">
-          <label class="field"><span>Location <em>(optional)</em></span><input type="text" formControlName="location" maxlength="200" placeholder="Park, road, building or landmark" /></label>
-          <label class="field"><span>Address <em>(required for urgent reports)</em></span><input type="text" formControlName="locationAddress" maxlength="300" placeholder="Street address or nearby landmark" /></label>
-        </div>
-        @if (form.hasError('urgentLocation') && form.controls.priority.touched) { <p class="field-error">An address is required for urgent reports.</p> }
+        <label class="field"><span>Location or address <em>(optional)</em></span><input type="text" formControlName="locationAddress" maxlength="300" placeholder="Street address, landmark, or nearby intersection" /></label>
         <div class="field-grid">
           <label class="field"><span>Latitude <em>(optional)</em></span><input type="number" formControlName="latitude" min="-90" max="90" step="any" placeholder="-90 to 90" /></label>
           <label class="field"><span>Longitude <em>(optional)</em></span><input type="number" formControlName="longitude" min="-180" max="180" step="any" placeholder="-180 to 180" /></label>
         </div>
         @if (form.touched && form.hasError('coordinatesTogether')) { <p class="field-error">Latitude and longitude must be provided together.</p> }
       </div>
-
-      @if (isAuthenticated) {
-        <div class="form-section attachment-section">
-          <h2>Add a picture <em>(optional)</em></h2>
-          <p class="section-note">Attach a photo that helps explain the problem.</p>
-          <label class="upload-button">
-            {{ selectedFileName() || 'Choose an image' }}
-            <input id="report-attachment" type="file" accept="image/*" (change)="selectAttachment($event)" [disabled]="submitting() || attachmentPending()" />
-          </label>
-          @if (attachmentProgress() !== null) {
-            <progress max="100" [value]="attachmentProgress()"></progress>
-          }
-        </div>
-      }
 
       @if (isAuthenticated) {
         <div class="signed-in-note">

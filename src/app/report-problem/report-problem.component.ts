@@ -1,26 +1,20 @@
 import { Component, inject, signal } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { apiErrorMessage, applyValidationErrors } from '../core/api-error';
+import { applyValidationErrors } from '../core/api-error';
 import { Category, CreateTicketRequest, TicketPriority } from '../core/models';
 import { CategoryService } from '../core/services/category.service';
 import { TicketService } from '../core/services/ticket.service';
 import { CurrentUserService } from '../core/services/current-user.service';
 import { TokenService } from '../core/services/token.service';
-import { AttachmentService } from '../core/services/attachment.service';
-
-const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 function reportValidator(anonymous: boolean): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const errors: ValidationErrors = {};
     const latitude = control.get('latitude')?.value as number | null;
     const longitude = control.get('longitude')?.value as number | null;
-    const priority = control.get('priority')?.value;
-    const locationAddress = String(control.get('locationAddress')?.value ?? '').trim();
     if ((latitude === null) !== (longitude === null)) errors['coordinatesTogether'] = true;
     if (anonymous && !String(control.get('reporterEmail')?.value ?? '').trim() && !String(control.get('reporterPhone')?.value ?? '').trim()) errors['anonymousContact'] = true;
-    if (priority === TicketPriority.Urgent && !locationAddress) errors['urgentLocation'] = true;
     return Object.keys(errors).length ? errors : null;
   };
 }
@@ -38,7 +32,6 @@ export class ReportProblemComponent {
   private readonly router = inject(Router);
   private readonly currentUser = inject(CurrentUserService);
   private readonly tokens = inject(TokenService);
-  private readonly attachments = inject(AttachmentService);
 
   readonly user = this.currentUser.snapshot();
   readonly isAuthenticated = !!this.user || !!this.tokens.accessToken || !!this.tokens.refreshToken;
@@ -50,9 +43,6 @@ export class ReportProblemComponent {
   readonly categoryError = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly submittedTicketNumber = signal<string | null>(null);
-  readonly selectedFileName = signal<string | null>(null);
-  readonly attachmentPending = signal(false);
-  readonly attachmentProgress = signal<number | null>(null);
   readonly priorities = Object.values(TicketPriority);
 
   readonly form = new FormGroup(
@@ -61,7 +51,6 @@ export class ReportProblemComponent {
       description: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(10), Validators.maxLength(4000)] }),
       categoryId: new FormControl<number | null>(null, { validators: [Validators.required] }),
       priority: new FormControl<TicketPriority | null>(TicketPriority.Medium, { validators: [Validators.required] }),
-      location: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(200)] }),
       locationAddress: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(300)] }),
       latitude: new FormControl<number | null>(null, { validators: [Validators.min(-90), Validators.max(90)] }),
       longitude: new FormControl<number | null>(null, { validators: [Validators.min(-180), Validators.max(180)] }),
@@ -83,28 +72,6 @@ export class ReportProblemComponent {
         this.loadingCategories.set(false);
       },
     });
-  }
-
-  selectAttachment(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-    if (!file) {
-      this.selectedFileName.set(null);
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      this.serverError.set('Please select an image file.');
-      input.value = '';
-      this.selectedFileName.set(null);
-      return;
-    }
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      this.serverError.set('Please select an image smaller than 10 MB.');
-      input.value = '';
-      this.selectedFileName.set(null);
-      return;
-    }
-    this.selectedFileName.set(file.name);
   }
 
   submit(): void {
@@ -133,28 +100,6 @@ export class ReportProblemComponent {
     this.tickets.create(request).subscribe({
       next: (ticket) => {
         if (this.isAuthenticated) {
-          const input = document.querySelector<HTMLInputElement>('#report-attachment');
-          const file = input?.files?.[0];
-          if (file) {
-            this.attachmentPending.set(true);
-            this.attachmentProgress.set(0);
-            this.attachments.uploadWithProgress(ticket.id, file).subscribe({
-              next: (event) => {
-                if (event.state === 'progress') {
-                  this.attachmentProgress.set(event.progress);
-                  return;
-                }
-                this.navigateAfterCreation(ticket.id, ticket.ticketNumber);
-              },
-              error: (error: unknown) => {
-                this.submitting.set(false);
-                this.attachmentPending.set(false);
-                this.attachmentProgress.set(null);
-                this.serverError.set(apiErrorMessage(error, 'The ticket was created, but the picture could not be uploaded.'));
-              },
-            });
-            return;
-          }
           this.navigateAfterCreation(ticket.id, ticket.ticketNumber);
           return;
         }
@@ -171,8 +116,6 @@ export class ReportProblemComponent {
   }
 
   private navigateAfterCreation(id: number, ticketNumber?: string): void {
-    this.attachmentPending.set(false);
-    this.attachmentProgress.set(null);
     void this.router.navigate(['/tickets', id], {
       queryParams: { ticketNumber: ticketNumber ?? '' },
     });

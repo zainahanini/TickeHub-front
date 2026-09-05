@@ -25,7 +25,9 @@ export interface User {
   email: string;
   displayName: string;
   phone: string | null;
-  userType: UserType;
+  userType?: UserType | string | null;
+  role?: string | null;
+  roles?: string[] | null;
   departmentId: number | null;
   departmentName?: string;
 }
@@ -86,7 +88,9 @@ export interface TicketListItem {
   ticketNumber?: string;
   title: string;
   status: TicketStatus;
+  statusName?: string;
   priority: TicketPriority;
+  priorityName?: string;
   categoryName: string;
   departmentName: string;
   createdByName: string;
@@ -94,6 +98,8 @@ export interface TicketListItem {
   createdAt: string;
   createdDate?: string;
   updatedAt: string;
+  dueAt?: string | null;
+  isOverdue?: boolean;
   categoryId?: number;
 }
 
@@ -103,13 +109,17 @@ export interface Ticket {
   title: string;
   description: string;
   status: TicketStatus;
+  statusName?: string;
   priority: TicketPriority;
+  priorityName?: string;
   categoryId: number;
   departmentId: number;
   categoryName?: string;
   departmentName?: string;
   location?: string | null;
   locationAddress?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   reporterName?: string | null;
   reporterEmail?: string | null;
   reporterPhone?: string | null;
@@ -118,6 +128,8 @@ export interface Ticket {
   assignedAgentId: number | null;
   createdAt: string;
   updatedAt: string;
+  dueAt?: string | null;
+  isOverdue?: boolean;
   rowVersion?: string;
   comments?: Comment[];
   attachments?: Attachment[];
@@ -229,6 +241,8 @@ export interface TicketQuery {
   pageSize?: number;
   unassigned?: boolean;
   overdue?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
 }
 
 export interface UpdateTicketRequest {

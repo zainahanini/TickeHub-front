@@ -1,23 +1,133 @@
 <section class="agent-panel">
-  <header class="panel-head"><div><p class="eyebrow">Staff workspace</p><h1>Ticket dashboard</h1><p>Review, prioritize, and manage reported issues.</p></div></header>
+  <header class="panel-head">
+    <div>
+      <p class="eyebrow">Staff workspace</p>
+      <h1>Ticket Queue</h1>
+      <p>Review, prioritize, and manage reported issues.</p>
+    </div>
+  </header>
+
   <form class="filters" (submit)="$event.preventDefault(); applyFilters()">
-    <input [formControl]="search" placeholder="Search tickets" aria-label="Search tickets" />
-    <select [formControl]="status" (change)="applyFilters()"><option value="">All statuses</option>@for (item of statuses; track item) { <option [value]="item">{{ item }}</option> }</select>
-    <select [formControl]="priority" (change)="applyFilters()"><option value="">All priorities</option>@for (item of priorities; track item) { <option [value]="item">{{ item }}</option> }</select>
-    <select [formControl]="categoryId" (change)="applyFilters()"><option value="">All categories</option>@for (item of categories(); track item.id) { <option [value]="item.id">{{ item.name }}</option> }</select>
-    <select [formControl]="departmentId" (change)="applyFilters()"><option value="">All departments</option>@for (item of departments(); track item.id) { <option [value]="item.id">{{ item.name }}</option> }</select>
-    <input [formControl]="assignedAgentId" (change)="applyFilters()" type="number" min="1" placeholder="Agent ID" aria-label="Assigned agent ID" />
-    <label class="check"><input type="checkbox" [formControl]="unassigned" (change)="applyFilters()" /> Unassigned</label>
-    <label class="check"><input type="checkbox" [formControl]="overdue" (change)="applyFilters()" /> Overdue</label>
-    <select [formControl]="sortBy" (change)="applyFilters()"><option value="createdAt">Date created</option><option value="priority">Priority</option><option value="status">Status</option><option value="title">Title</option></select>
-    <select [formControl]="sortDescending" (change)="applyFilters()"><option value="true">Newest first</option><option value="false">Oldest first</option></select>
-    <button type="submit" class="primary-btn">Search</button><button type="button" class="reset-btn" (click)="reset()">Reset</button>
+    <label>
+      Status
+      <select [formControl]="status" (change)="applyFilters()">
+        <option value="">All statuses</option>
+        @for (item of statuses; track item) {
+          <option [value]="item">{{ item }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Priority
+      <select [formControl]="priority" (change)="applyFilters()">
+        <option value="">All priorities</option>
+        @for (item of priorities; track item) {
+          <option [value]="item">{{ item }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Category
+      <select [formControl]="categoryId" (change)="applyFilters()">
+        <option value="">All categories</option>
+        @for (item of categories(); track item.id) {
+          <option [value]="item.id">{{ item.name }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Department
+      <select [formControl]="departmentId" (change)="applyFilters()">
+        <option value="">All departments</option>
+        @for (item of departments(); track item.id) {
+          <option [value]="item.id">{{ item.name }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Assigned agent
+      <select [formControl]="assignedAgentId" (change)="applyFilters()">
+        <option value="">Any agent</option>
+        @for (agent of agents(); track agent.id) {
+          <option [value]="agent.id">{{ agent.firstName }} {{ agent.lastName }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Created from
+      <input type="date" [formControl]="createdFrom" (change)="applyFilters()" />
+    </label>
+
+    <label>
+      Created to
+      <input type="date" [formControl]="createdTo" (change)="applyFilters()" />
+    </label>
+
+    <label>
+      Sort by
+      <select [formControl]="sortBy" (change)="applyFilters()">
+        <option value="createdAt">Date created</option>
+        <option value="priority">Priority</option>
+        <option value="status">Status</option>
+        <option value="dueAt">Due date</option>
+        <option value="title">Title</option>
+      </select>
+    </label>
+
+    <label>
+      Sort direction
+      <select [formControl]="sortDescending" (change)="applyFilters()">
+        <option value="true">Descending</option>
+        <option value="false">Ascending</option>
+      </select>
+    </label>
+
+    <label class="check">
+      <input type="checkbox" [formControl]="unassigned" (change)="applyFilters()" />
+      Unassigned only
+    </label>
+
+    <label class="check">
+      <input type="checkbox" [formControl]="overdue" (change)="applyFilters()" />
+      Overdue only
+    </label>
+
+    <div class="filter-actions">
+      <button type="submit" class="primary-btn">Apply filters</button>
+      <button type="button" class="reset-btn" (click)="reset()">Reset</button>
+    </div>
   </form>
+
   @if (error()) { <p class="banner error">{{ error() }}</p> }
   @if (loading()) { <p class="muted">Loading tickets...</p> }
   @else if (results(); as pageResults) {
     @if (pageResults.items.length === 0) { <p class="muted">No tickets match these filters.</p> }
-    <div class="ticket-grid">@for (ticket of pageResults.items; track ticket.id) { <a class="ticket-item" [routerLink]="['/tickets', ticket.id]"><div class="ticket-top"><strong>{{ ticket.ticketNumber || ('Ticket #' + ticket.id) }}</strong><span>{{ ticket.status }}</span></div><h2>{{ ticket.title }}</h2><p>{{ ticket.categoryName }} · {{ ticket.departmentName }}</p><small>Created {{ ticket.createdAt | date: 'medium' }}</small></a> }</div>
-    <div class="pagination"><button type="button" (click)="previous()" [disabled]="page() === 1">Previous</button><span>Page {{ pageResults.page }} of {{ pageCount(pageResults.totalCount, pageResults.pageSize) }}</span><button type="button" (click)="next()" [disabled]="page() * pageResults.pageSize >= pageResults.totalCount">Next</button></div>
+    <div class="ticket-grid">
+      @for (ticket of pageResults.items; track ticket.id) {
+        <a class="ticket-item" [class.overdue]="ticket.isOverdue" [routerLink]="['/tickets', ticket.id]">
+          <div class="ticket-top">
+            <strong>{{ ticket.ticketNumber || ('Ticket #' + ticket.id) }}</strong>
+            <span>{{ ticket.statusName || ticket.status }}</span>
+          </div>
+          <h2>{{ ticket.title }}</h2>
+          <p>{{ ticket.categoryName }} - {{ ticket.departmentName }}</p>
+          <small>
+            Priority {{ ticket.priorityName || ticket.priority }} - Created {{ ticket.createdAt | date: 'medium' }}
+            @if (ticket.dueAt) { - Due {{ ticket.dueAt | date: 'medium' }} }
+            @if (ticket.isOverdue) { - Overdue }
+          </small>
+        </a>
+      }
+    </div>
+    <div class="pagination">
+      <button type="button" (click)="previous()" [disabled]="page() === 1">Previous</button>
+      <span>Page {{ pageResults.page }} of {{ pageCount(pageResults.totalCount, pageResults.pageSize) }}</span>
+      <button type="button" (click)="next()" [disabled]="page() * pageResults.pageSize >= pageResults.totalCount">Next</button>
+    </div>
   }
 </section>

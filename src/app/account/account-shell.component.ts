@@ -5,6 +5,7 @@ import { AuthService } from '../core/services/auth.service';
 import { ChatService } from '../core/services/chat.service';
 import { CurrentUserService } from '../core/services/current-user.service';
 import { NotificationService } from '../core/services/notification.service';
+import { UserType } from '../core/models';
 
 @Component({
   selector: 'app-account-shell',
@@ -18,7 +19,8 @@ export class AccountShellComponent {
   private readonly router = inject(Router);
   private readonly notifications = inject(NotificationService);
   private readonly chat = inject(ChatService);
-  readonly user = toSignal(inject(CurrentUserService).user$, { initialValue: null });
+  private readonly currentUser = inject(CurrentUserService);
+  readonly user = toSignal(this.currentUser.user$, { initialValue: null });
   readonly unreadCount = signal(0);
   readonly chatUnreadCount = signal(0);
 
@@ -39,5 +41,13 @@ export class AccountShellComponent {
     this.auth.logout().subscribe(() => {
       void this.router.navigate(['/login']);
     });
+  }
+
+  canSeeTicketQueue(): boolean {
+    return this.currentUser.hasRole(UserType.Agent, UserType.Supervisor, UserType.Admin);
+  }
+
+  canSeeTeam(): boolean {
+    return this.currentUser.hasRole(UserType.Supervisor, UserType.Admin);
   }
 }
