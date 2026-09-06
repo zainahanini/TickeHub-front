@@ -1,0 +1,78 @@
+<section class="panel">
+  <header>
+    <div>
+      <p class="eyebrow">Administration</p>
+      <h1>Categories</h1>
+      <p>Manage the ticket categories citizens use when reporting problems.</p>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="banner error">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="banner success">{{ message() }}</p>
+  }
+
+  <form class="create-form" #createForm="ngForm" (submit)="$event.preventDefault(); create()">
+    <label>
+      Category name
+      <input required maxlength="100" [(ngModel)]="createDraft.name" name="createName" />
+    </label>
+    <label>
+      Department
+      <select [(ngModel)]="createDraft.departmentId" name="createDepartmentId">
+        <option [ngValue]="null">No department</option>
+        @for (department of departments(); track department.id) {
+          <option [ngValue]="department.id">{{ department.name }}</option>
+        }
+      </select>
+    </label>
+    <button type="submit" class="primary-action" [disabled]="createForm.invalid || pendingId() !== null">Create</button>
+  </form>
+
+  @if (loading()) {
+    <p class="muted">Loading categories...</p>
+  } @else if (!categories().length) {
+    <p class="muted">No categories found.</p>
+  } @else {
+    <div class="category-list">
+      @for (category of categories(); track category.id) {
+        <article class="category-row">
+          @if (editingId() === category.id) {
+            <form class="edit-form" #editForm="ngForm" (submit)="$event.preventDefault(); save(category)">
+              <label>
+                Category name
+                <input required maxlength="100" [(ngModel)]="editDraft.name" name="editName-{{ category.id }}" />
+              </label>
+              <label>
+                Department
+                <select [(ngModel)]="editDraft.departmentId" name="editDepartment-{{ category.id }}">
+                  <option [ngValue]="null">No department</option>
+                  @for (department of departments(); track department.id) {
+                    <option [ngValue]="department.id">{{ department.name }}</option>
+                  }
+                </select>
+              </label>
+              <div class="actions">
+                <button type="submit" [disabled]="editForm.invalid || pendingId() === category.id">Save</button>
+                <button type="button" (click)="editingId.set(null)">Cancel</button>
+              </div>
+            </form>
+          } @else {
+            <div>
+              <h2>{{ category.name }}</h2>
+              <p>{{ departmentName(category) }}</p>
+            </div>
+            <div class="actions">
+              <button type="button" (click)="beginEdit(category)">Edit</button>
+              @if (isAdmin) {
+                <button type="button" class="danger" [disabled]="pendingId() === category.id" (click)="remove(category)">Delete</button>
+              }
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

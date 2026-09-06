@@ -38,6 +38,9 @@ yarn-error.log
 testem.log
 /typings
 __screenshots__/
+.tmp-chrome-cdp*/
+.tmp-chrome-profile*/
+.tmp-edge-profile*/
 
 # System files
 .DS_Store

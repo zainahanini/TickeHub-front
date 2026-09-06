@@ -25,8 +25,8 @@ export class AgentsComponent {
   readonly error = signal<string | null>(null);
   readonly loading = signal(true);
   readonly pendingId = signal<number | null>(null);
-  readonly isAdmin = this.currentUser.snapshot()?.userType === UserType.Admin;
-  readonly isSupervisor = this.currentUser.snapshot()?.userType === UserType.Supervisor;
+  readonly isAdmin = this.currentUser.hasRole(UserType.Admin);
+  readonly isSupervisor = this.currentUser.hasRole(UserType.Supervisor);
   readonly editingId = signal<number | null>(null);
   readonly creating = signal(false);
   readonly draft = { firstName: '', lastName: '', departmentId: 0, isAvailable: true };
@@ -45,10 +45,10 @@ export class AgentsComponent {
 
   beginEdit(agent: Agent): void {
     this.editingId.set(agent.id);
-    this.draft.firstName = agent.firstName;
-    this.draft.lastName = agent.lastName;
-    this.draft.departmentId = agent.departmentId;
-    this.draft.isAvailable = agent.isAvailable;
+    this.draft.firstName = agent.firstName ?? '';
+    this.draft.lastName = agent.lastName ?? '';
+    this.draft.departmentId = agent.departmentId ?? 0;
+    this.draft.isAvailable = agent.isAvailable ?? true;
   }
 
   beginCreate(): void {
@@ -62,7 +62,7 @@ export class AgentsComponent {
   }
 
   create(): void {
-    if (!this.isAdmin || this.pendingId() || !this.createDraft.userId || !this.createDraft.departmentId) {
+    if (!this.isAdmin || this.pendingId() || !this.createDraft.userId || !this.validAgentDraft(this.createDraft)) {
       return;
     }
     this.pendingId.set(0);
@@ -87,12 +87,15 @@ export class AgentsComponent {
   }
 
   save(agent: Agent): void {
+    if (!this.validAgentDraft(this.draft)) {
+      return;
+    }
     this.pendingId.set(agent.id);
     this.agentsService.update(agent.id, this.draft).subscribe({ next: (updated) => { this.agents.update((items) => items.map((item) => item.id === updated.id ? updated : item)); this.editingId.set(null); this.pendingId.set(null); }, error: (error: unknown) => { this.error.set(apiErrorMessage(error, 'Could not update agent.')); this.pendingId.set(null); } });
   }
 
   remove(agent: Agent): void {
-    if (!this.isAdmin || !confirm(`Delete ${agent.firstName} ${agent.lastName}?`)) return;
+    if (!this.isAdmin || !confirm(`Delete ${this.agentDisplayName(agent)}?`)) return;
     this.pendingId.set(agent.id);
     this.agentsService.delete(agent.id).subscribe({ next: () => { this.agents.update((items) => items.filter((item) => item.id !== agent.id)); this.pendingId.set(null); }, error: (error: unknown) => { this.error.set(apiErrorMessage(error, 'Could not delete agent.')); this.pendingId.set(null); } });
   }
@@ -100,5 +103,22 @@ export class AgentsComponent {
   skillText(agent: Agent): string {
     const skills = (agent.skills ?? []).map((skill) => typeof skill === 'string' ? skill : skill.name);
     return skills.length ? skills.join(', ') : 'No skills listed';
+  }
+
+  agentDisplayName(agent: Agent): string {
+    const firstLast = [agent.firstName, agent.lastName]
+      .map((part) => part?.trim())
+      .filter((part): part is string => !!part)
+      .join(' ');
+    return agent.displayName?.trim()
+      || agent.fullName?.trim()
+      || agent.name?.trim()
+      || firstLast
+      || agent.email?.trim()
+      || `Agent #${agent.id}`;
+  }
+
+  private validAgentDraft(draft: { firstName: string; lastName: string; departmentId: number }): boolean {
+    return !!draft.firstName.trim() && !!draft.lastName.trim() && Number(draft.departmentId) > 0;
   }
 }

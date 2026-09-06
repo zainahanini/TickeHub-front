@@ -57,8 +57,10 @@
         <article class="agent-card">
           <div class="agent-heading">
             <div>
-              <h2><a [routerLink]="['/agent/agents', agent.id]">{{ agent.firstName }} {{ agent.lastName }}</a></h2>
-              <p>{{ agent.email }}</p>
+              <h2><a [routerLink]="['/agents', agent.id]">{{ agentDisplayName(agent) }}</a></h2>
+              @if (agent.email) {
+                <p>{{ agent.email }}</p>
+              }
             </div>
             <span class="badge" [class.offline]="!agent.isAvailable">{{ agent.isAvailable ? 'Available' : 'Unavailable' }}</span>
           </div>
@@ -95,7 +97,7 @@
               <div><dt>Skills</dt><dd>{{ skillText(agent) }}</dd></div>
             </dl>
             <div class="actions">
-              <a [routerLink]="['/agent/agents', agent.id]">Details</a>
+              <a [routerLink]="['/agents', agent.id]">Details</a>
               @if (isSupervisor || isAdmin) {
                 <button type="button" (click)="beginEdit(agent)">Edit</button>
               }

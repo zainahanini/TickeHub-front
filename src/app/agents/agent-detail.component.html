@@ -2,9 +2,9 @@
   <header>
     <div>
       <p class="eyebrow">{{ isProfileRoute ? 'Staff profile' : 'Agent details' }}</p>
-      <h1>{{ agent() ? agent()!.firstName + ' ' + agent()!.lastName : 'Agent' }}</h1>
+      <h1>{{ agent() ? agentDisplayName(agent()!) : 'Agent' }}</h1>
     </div>
-    <a routerLink="/agent/agents">Directory</a>
+    <a routerLink="/agents">Directory</a>
   </header>
 
   @if (error()) {
@@ -21,15 +21,26 @@
       <section class="summary">
         <h2>Overview</h2>
         <dl>
-          <div><dt>Email</dt><dd>{{ current.email }}</dd></div>
-          <div><dt>Department</dt><dd>{{ current.departmentName || current.departmentId }}</dd></div>
-          <div><dt>Status</dt><dd>{{ current.isAvailable ? 'Available' : 'Unavailable' }}</dd></div>
-          <div><dt>Open tickets</dt><dd>{{ current.openTicketCount ?? 0 }}{{ current.capacity !== undefined ? ' / ' + current.capacity : '' }}</dd></div>
-          <div><dt>Skills</dt><dd>{{ skillText(current) }}</dd></div>
+          <div><dt>Name</dt><dd>{{ agentDisplayName(current) }}</dd></div>
+          @if (current.email) {
+            <div><dt>Email</dt><dd>{{ current.email }}</dd></div>
+          }
+          @if (current.departmentName || current.departmentId) {
+            <div><dt>Department</dt><dd>{{ current.departmentName || current.departmentId }}</dd></div>
+          }
+          @if (current.isAvailable !== undefined) {
+            <div><dt>Status</dt><dd>{{ current.isAvailable ? 'Available' : 'Unavailable' }}</dd></div>
+          }
+          @if (current.openTicketCount !== undefined) {
+            <div><dt>Open tickets</dt><dd>{{ current.openTicketCount }}{{ current.capacity !== undefined ? ' / ' + current.capacity : '' }}</dd></div>
+          }
+          @if ((current.skills ?? []).length) {
+            <div><dt>Skills</dt><dd>{{ skillText(current) }}</dd></div>
+          }
         </dl>
       </section>
 
-      @if (isSupervisor || isAdmin) {
+      @if (!isProfileRoute && (isSupervisor || isAdmin)) {
         <form class="form-panel" (submit)="$event.preventDefault(); saveManagement()">
           <h2>Management</h2>
           <label>
@@ -63,24 +74,19 @@
 
       @if (isProfileRoute) {
         <form class="form-panel" (submit)="$event.preventDefault(); saveProfile()">
-          <h2>Profile</h2>
+          <h2>Edit profile</h2>
           <label>
-            First name
-            <input required maxlength="80" [(ngModel)]="profileDraft.firstName" name="profileFirstName" />
+            Bio
+            <textarea maxlength="1000" rows="5" [(ngModel)]="profileDraft.bio" name="profileBio"></textarea>
           </label>
           <label>
-            Last name
-            <input required maxlength="80" [(ngModel)]="profileDraft.lastName" name="profileLastName" />
+            Office phone
+            <input type="tel" maxlength="30" [(ngModel)]="profileDraft.officePhone" name="profileOfficePhone" />
           </label>
-          <fieldset>
-            <legend>Skills</legend>
-            @for (skill of skills(); track skill.id) {
-              <label class="check">
-                <input type="checkbox" [checked]="hasSkill(skill.id)" (change)="toggleSkill(skill.id, $any($event.target).checked)" />
-                {{ skill.name }}
-              </label>
-            }
-          </fieldset>
+          <label>
+            Avatar URL
+            <input type="url" maxlength="500" [(ngModel)]="profileDraft.avatarUrl" name="profileAvatarUrl" />
+          </label>
           <button type="submit" [disabled]="pending()">Save profile</button>
         </form>
       }

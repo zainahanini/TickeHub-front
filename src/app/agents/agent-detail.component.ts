@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import { Agent, AgentSkill, Department, UserType } from '../core/models';
 import { apiErrorMessage } from '../core/api-error';
 import { AgentService } from '../core/services/agent.service';
@@ -28,11 +29,11 @@ export class AgentDetailComponent {
   readonly error = signal<string | null>(null);
   readonly message = signal<string | null>(null);
   readonly pending = signal(false);
-  readonly isAdmin = this.currentUser.snapshot()?.userType === UserType.Admin;
-  readonly isSupervisor = this.currentUser.snapshot()?.userType === UserType.Supervisor;
-  readonly isProfileRoute = this.route.snapshot.routeConfig?.path === 'agent/profile';
+  readonly isAdmin = this.currentUser.hasRole(UserType.Admin);
+  readonly isSupervisor = this.currentUser.hasRole(UserType.Supervisor);
+  readonly isProfileRoute = ['agent/profile', 'profile'].includes(this.route.snapshot.routeConfig?.path ?? '');
   readonly managementDraft = { firstName: '', lastName: '', departmentId: 0, isAvailable: true };
-  readonly profileDraft = { firstName: '', lastName: '', skillIds: new Set<number>() };
+  readonly profileDraft = { bio: '', avatarUrl: '', officePhone: '' };
 
   constructor() {
     this.departmentsService.list().subscribe({ next: (items) => this.departments.set(items) });
@@ -48,21 +49,22 @@ export class AgentDetailComponent {
     this.load();
   }
 
-  toggleSkill(id: number, checked: boolean): void {
-    if (checked) {
-      this.profileDraft.skillIds.add(id);
-    } else {
-      this.profileDraft.skillIds.delete(id);
-    }
-  }
-
-  hasSkill(id: number): boolean {
-    return this.profileDraft.skillIds.has(id);
-  }
-
   skillText(agent: Agent): string {
     const skills = (agent.skills ?? []).map((skill) => typeof skill === 'string' ? skill : skill.name);
     return skills.length ? skills.join(', ') : 'No skills listed';
+  }
+
+  agentDisplayName(agent: Agent): string {
+    const firstLast = [agent.firstName, agent.lastName]
+      .map((part) => part?.trim())
+      .filter((part): part is string => !!part)
+      .join(' ');
+    return agent.displayName?.trim()
+      || agent.fullName?.trim()
+      || agent.name?.trim()
+      || firstLast
+      || agent.email?.trim()
+      || 'Agent';
   }
 
   saveManagement(): void {
@@ -95,9 +97,9 @@ export class AgentDetailComponent {
     this.pending.set(true);
     this.error.set(null);
     this.agentsService.updateProfile(agent.id, {
-      firstName: this.profileDraft.firstName.trim(),
-      lastName: this.profileDraft.lastName.trim(),
-      skills: [...this.profileDraft.skillIds],
+      bio: this.profileDraft.bio.trim() || null,
+      avatarUrl: this.profileDraft.avatarUrl.trim() || null,
+      officePhone: this.profileDraft.officePhone.trim() || null,
     }).subscribe({
       next: (updated) => {
         this.agent.set(updated);
@@ -114,10 +116,10 @@ export class AgentDetailComponent {
 
   deleteAgent(): void {
     const agent = this.agent();
-    if (!this.isAdmin || !agent || !confirm(`Delete ${agent.firstName} ${agent.lastName}?`)) return;
+    if (!this.isAdmin || !agent || !confirm(`Delete ${this.agentDisplayName(agent)}?`)) return;
     this.pending.set(true);
     this.agentsService.delete(agent.id).subscribe({
-      next: () => void this.router.navigate(['/agent/agents']),
+      next: () => void this.router.navigate(['/agents']),
       error: (error: unknown) => {
         this.error.set(apiErrorMessage(error, 'Could not delete agent.'));
         this.pending.set(false);
@@ -152,51 +154,53 @@ export class AgentDetailComponent {
   }
 
   private loadProfile(): void {
-    const userId = this.currentUser.snapshot()?.id;
-    if (!userId) {
+    const user = this.currentUser.snapshot();
+    if (!user?.id) {
       this.loading.set(false);
       this.error.set('Your staff profile could not be identified.');
       return;
     }
 
-    this.agentsService.list().subscribe({
+    if (user.agentId) {
+      this.agentsService.getById(user.agentId).pipe(
+        finalize(() => this.loading.set(false)),
+      ).subscribe({
+        next: (agent) => {
+          this.agent.set(agent);
+          this.setDrafts(agent);
+        },
+        error: (error: unknown) => {
+          this.error.set(error instanceof Error ? apiErrorMessage(error, 'Agent profile not found.') : 'Agent profile not found.');
+        },
+      });
+      return;
+    }
+
+    this.agentsService.list().pipe(
+      finalize(() => this.loading.set(false)),
+    ).subscribe({
       next: (agents) => {
-        const agent = agents.find((item) => item.userId === userId) ?? null;
+        const agent = agents.find((item) => item.userId === user.id) ?? null;
         this.agent.set(agent);
         if (agent) {
           this.setDrafts(agent);
         } else {
-          this.error.set('No agent profile was found for your account.');
+          this.error.set('Agent profile not found.');
         }
-        this.loading.set(false);
       },
       error: (error: unknown) => {
         this.error.set(apiErrorMessage(error, 'Could not load your agent profile.'));
-        this.loading.set(false);
       },
     });
   }
 
   private setDrafts(agent: Agent): void {
-    this.managementDraft.firstName = agent.firstName;
-    this.managementDraft.lastName = agent.lastName;
-    this.managementDraft.departmentId = agent.departmentId;
-    this.managementDraft.isAvailable = agent.isAvailable;
-    this.profileDraft.firstName = agent.firstName;
-    this.profileDraft.lastName = agent.lastName;
-    this.profileDraft.skillIds = new Set(this.selectedSkillIds(agent));
-  }
-
-  private selectedSkillIds(agent: Agent): number[] {
-    const explicitIds = (agent.skills ?? [])
-      .filter((skill): skill is AgentSkill => typeof skill !== 'string')
-      .map((skill) => skill.id);
-    if (explicitIds.length) {
-      return explicitIds;
-    }
-    const names = new Set((agent.skills ?? [])
-      .filter((skill): skill is string => typeof skill === 'string')
-      .map((skill) => skill.toLowerCase()));
-    return this.skills().filter((skill) => names.has(skill.name.toLowerCase())).map((skill) => skill.id);
+    this.managementDraft.firstName = agent.firstName ?? '';
+    this.managementDraft.lastName = agent.lastName ?? '';
+    this.managementDraft.departmentId = agent.departmentId ?? 0;
+    this.managementDraft.isAvailable = agent.isAvailable ?? true;
+    this.profileDraft.bio = agent.bio ?? '';
+    this.profileDraft.avatarUrl = agent.avatarUrl ?? '';
+    this.profileDraft.officePhone = agent.officePhone ?? '';
   }
 }

@@ -7,10 +7,10 @@
     </div>
   </header>
 
-  <form class="filters" (submit)="$event.preventDefault(); applyFilters()">
+  <form class="filters" (submit)="$event.preventDefault()">
     <label>
       Status
-      <select [formControl]="status" (change)="applyFilters()">
+      <select [formControl]="status">
         <option value="">All statuses</option>
         @for (item of statuses; track item) {
           <option [value]="item">{{ item }}</option>
@@ -20,7 +20,7 @@
 
     <label>
       Priority
-      <select [formControl]="priority" (change)="applyFilters()">
+      <select [formControl]="priority">
         <option value="">All priorities</option>
         @for (item of priorities; track item) {
           <option [value]="item">{{ item }}</option>
@@ -30,7 +30,7 @@
 
     <label>
       Category
-      <select [formControl]="categoryId" (change)="applyFilters()">
+      <select [formControl]="categoryId">
         <option value="">All categories</option>
         @for (item of categories(); track item.id) {
           <option [value]="item.id">{{ item.name }}</option>
@@ -40,7 +40,7 @@
 
     <label>
       Department
-      <select [formControl]="departmentId" (change)="applyFilters()">
+      <select [formControl]="departmentId">
         <option value="">All departments</option>
         @for (item of departments(); track item.id) {
           <option [value]="item.id">{{ item.name }}</option>
@@ -50,7 +50,7 @@
 
     <label>
       Assigned agent
-      <select [formControl]="assignedAgentId" (change)="applyFilters()">
+      <select [formControl]="assignedAgentId">
         <option value="">Any agent</option>
         @for (agent of agents(); track agent.id) {
           <option [value]="agent.id">{{ agent.firstName }} {{ agent.lastName }}</option>
@@ -60,12 +60,12 @@
 
     <label>
       Created from
-      <input type="date" [formControl]="createdFrom" (change)="applyFilters()" />
+      <input type="date" [formControl]="createdFrom" />
     </label>
 
     <label>
       Created to
-      <input type="date" [formControl]="createdTo" (change)="applyFilters()" />
+      <input type="date" [formControl]="createdTo" />
     </label>
 
     <label>
@@ -88,27 +88,27 @@
     </label>
 
     <label class="check">
-      <input type="checkbox" [formControl]="unassigned" (change)="applyFilters()" />
+      <input type="checkbox" [formControl]="unassigned" />
       Unassigned only
     </label>
 
     <label class="check">
-      <input type="checkbox" [formControl]="overdue" (change)="applyFilters()" />
+      <input type="checkbox" [formControl]="overdue" />
       Overdue only
     </label>
 
     <div class="filter-actions">
-      <button type="submit" class="primary-btn">Apply filters</button>
+      <button type="button" class="primary-btn" (click)="applyFilters()">Apply filters</button>
       <button type="button" class="reset-btn" (click)="reset()">Reset</button>
     </div>
   </form>
 
-  @if (error()) { <p class="banner error">{{ error() }}</p> }
   @if (loading()) { <p class="muted">Loading tickets...</p> }
-  @else if (results(); as pageResults) {
-    @if (pageResults.items.length === 0) { <p class="muted">No tickets match these filters.</p> }
+  @else if (error()) { <p class="banner error">{{ error() }}</p> }
+  @else if (items().length === 0) { <p class="muted">No tickets found.</p> }
+  @else {
     <div class="ticket-grid">
-      @for (ticket of pageResults.items; track ticket.id) {
+      @for (ticket of items(); track ticket.id) {
         <a class="ticket-item" [class.overdue]="ticket.isOverdue" [routerLink]="['/tickets', ticket.id]">
           <div class="ticket-top">
             <strong>{{ ticket.ticketNumber || ('Ticket #' + ticket.id) }}</strong>
@@ -124,10 +124,12 @@
         </a>
       }
     </div>
-    <div class="pagination">
-      <button type="button" (click)="previous()" [disabled]="page() === 1">Previous</button>
-      <span>Page {{ pageResults.page }} of {{ pageCount(pageResults.totalCount, pageResults.pageSize) }}</span>
-      <button type="button" (click)="next()" [disabled]="page() * pageResults.pageSize >= pageResults.totalCount">Next</button>
-    </div>
+    @if (results(); as pageResults) {
+      <div class="pagination">
+        <button type="button" (click)="previous()" [disabled]="page() === 1">Previous</button>
+        <span>Page {{ pageResults.page }} of {{ pageCount(pageResults.totalCount, pageResults.pageSize) }}</span>
+        <button type="button" (click)="next()" [disabled]="page() * pageResults.pageSize >= pageResults.totalCount">Next</button>
+      </div>
+    }
   }
 </section>
