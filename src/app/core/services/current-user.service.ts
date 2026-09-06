@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { User, UserType } from '../models';
 
+type RoleValue = UserType | string | null | undefined;
+
 @Injectable({ providedIn: 'root' })
 export class CurrentUserService {
   private readonly userSubject = new BehaviorSubject<User | null>(null);
@@ -15,29 +17,39 @@ export class CurrentUserService {
     this.userSubject.next(user);
   }
 
-  hasRole(...roles: Array<UserType | string>): boolean {
+  hasRole(...roles: RoleValue[]): boolean {
     const user = this.userSubject.value;
     if (!user) {
       return false;
     }
 
-    const allowedRoles = roles.map((role) => this.normalizeRole(role));
+    const allowedRoles = roles.map((role) => this.normalizeRole(role)).filter((role): role is string => !!role);
     return this.userRoles(user).some((role) => allowedRoles.includes(role));
   }
 
   private userRoles(user: User): string[] {
-    const values = [
-      user.userType,
-      user.role,
-      ...(Array.isArray(user.roles) ? user.roles : []),
-    ];
+    const roles = (Array.isArray(user.roles) ? user.roles : [])
+      .map((role) => this.normalizeRole(role))
+      .filter((role): role is string => !!role);
 
-    return values
-      .filter((role): role is string => typeof role === 'string' && role.trim().length > 0)
-      .map((role) => this.normalizeRole(role));
+    if (roles.length) {
+      return roles;
+    }
+
+    const userType = this.normalizeRole(user.userType);
+    return userType ? [userType] : [];
   }
 
-  private normalizeRole(role: string): string {
-    return role.trim().toLowerCase();
+  private normalizeRole(role: RoleValue): string | null {
+    if (typeof role !== 'string') {
+      return null;
+    }
+
+    const normalized = role.trim().toLowerCase();
+    return this.isAuthorizationRole(normalized) ? normalized : null;
+  }
+
+  private isAuthorizationRole(role: string): boolean {
+    return Object.values(UserType).some((userType) => userType.toLowerCase() === role);
   }
 }
