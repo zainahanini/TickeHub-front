@@ -25,6 +25,7 @@ export interface User {
   email: string;
   displayName: string;
   phone: string | null;
+  agentId?: number | null;
   userType?: UserType | string | null;
   role?: string | null;
   roles?: string[] | null;
@@ -46,15 +47,21 @@ export interface Category {
 export interface Agent {
   id: number;
   userId: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  departmentId: number;
-  isAvailable: boolean;
+  firstName?: string | null;
+  lastName?: string | null;
+  displayName?: string | null;
+  fullName?: string | null;
+  name?: string | null;
+  email?: string | null;
+  departmentId?: number;
+  isAvailable?: boolean;
   openTicketCount?: number;
   capacity?: number;
   departmentName?: string;
   skills?: Array<string | AgentSkill>;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  officePhone?: string | null;
 }
 
 export interface AgentSkill {
@@ -78,9 +85,9 @@ export interface UpdateAgentRequest {
 }
 
 export interface UpdateAgentProfileRequest {
-  firstName: string;
-  lastName: string;
-  skills: number[];
+  bio: string | null;
+  avatarUrl: string | null;
+  officePhone: string | null;
 }
 
 export interface TicketListItem {
@@ -169,6 +176,7 @@ export interface Attachment {
   sizeBytes: number;
   uploadedAt: string;
   description?: string | null;
+  canDelete?: boolean;
 }
 
 export interface Rating {
@@ -267,6 +275,9 @@ export interface PagedTickets {
   totalCount: number;
   page: number;
   pageSize: number;
+  totalPages?: number;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
 }
 
 export interface TicketWorkflowAction {
@@ -275,7 +286,11 @@ export interface TicketWorkflowAction {
   label?: string;
   status?: TicketStatus;
   toStatus?: TicketStatus;
+  newStatus?: TicketStatus;
+  targetStatus?: TicketStatus;
+  requiresReason?: boolean;
   reasonRequired?: boolean;
+  canExecute?: boolean;
 }
 
 export interface TicketHistoryEntry {
@@ -339,6 +354,20 @@ export interface Workflow {
   fromStatus: TicketStatus;
   toStatus: TicketStatus;
   requiredUserType: UserType;
+}
+
+export interface WorkflowStatus {
+  status: TicketStatus;
+  name: string;
+}
+
+export interface WorkflowTransition {
+  fromStatus: TicketStatus;
+  toStatus: TicketStatus;
+  name?: string;
+  label?: string;
+  requiresReason?: boolean;
+  requiredUserType?: UserType | string;
 }
 
 export interface TicketStatusCount {

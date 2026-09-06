@@ -51,11 +51,30 @@ nav a.active {
   color: #ce1126;
 }
 
+.notification-menu {
+  position: relative;
+}
+
+.bell-btn {
+  position: relative;
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #d8d0c2;
+  border-radius: 999px;
+  background: #fff;
+  color: #006b3c;
+  cursor: pointer;
+}
+
 .notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
   display: inline-grid;
   min-width: 18px;
   height: 18px;
-  margin-left: 4px;
   padding: 0 5px;
   place-items: center;
   border-radius: 999px;
@@ -63,6 +82,89 @@ nav a.active {
   color: #fff;
   font-size: 0.72rem;
   line-height: 1;
+}
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 10;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 430px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #e0e5e1;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 35px rgba(0, 0, 0, .12);
+}
+
+.notification-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.notification-panel header button,
+.notification-actions button {
+  border: 0;
+  background: none;
+  color: #006b3c;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notification-list {
+  display: grid;
+  gap: 9px;
+}
+
+.notification-list article {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid #e0e5e1;
+  border-left: 4px solid transparent;
+  border-radius: 6px;
+}
+
+.notification-list article.unread {
+  border-left-color: #ce1126;
+  background: #fffafa;
+}
+
+.notification-list h2,
+.notification-list p {
+  margin: 0;
+}
+
+.notification-list h2 {
+  font-size: .95rem;
+}
+
+.notification-list p,
+.notification-list small,
+.panel-muted {
+  color: #5c5c5c;
+}
+
+.panel-error {
+  color: #ce1126;
+  font-weight: 700;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.notification-actions a {
+  color: #006b3c;
+  font-weight: 700;
 }
 
 .content {

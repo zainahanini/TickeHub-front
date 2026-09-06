@@ -24,6 +24,8 @@ export class ReportsDashboardComponent {
   readonly departments = signal<Department[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly satisfactionSort = signal<'category' | 'score' | 'responses' | null>(null);
+  readonly satisfactionSortDescending = signal(false);
 
   readonly from = new FormControl(this.defaultFrom(), { nonNullable: true });
   readonly to = new FormControl(this.today(), { nonNullable: true });
@@ -75,6 +77,41 @@ export class ReportsDashboardComponent {
 
   satisfactionWidth(item: CategorySatisfaction): string {
     return `${Math.min(100, Math.max(0, (this.satisfactionScore(item) / 5) * 100))}%`;
+  }
+
+  sortedSatisfaction(): CategorySatisfaction[] {
+    const sort = this.satisfactionSort();
+    const items = [...this.satisfaction()];
+    if (!sort) {
+      return items;
+    }
+
+    const direction = this.satisfactionSortDescending() ? -1 : 1;
+    return items.sort((first, second) => {
+      if (sort === 'category') {
+        return first.categoryName.localeCompare(second.categoryName) * direction;
+      }
+      if (sort === 'score') {
+        return (this.satisfactionScore(first) - this.satisfactionScore(second)) * direction;
+      }
+      return (this.satisfactionCount(first) - this.satisfactionCount(second)) * direction;
+    });
+  }
+
+  sortSatisfaction(sort: 'category' | 'score' | 'responses'): void {
+    if (this.satisfactionSort() === sort) {
+      this.satisfactionSortDescending.update((value) => !value);
+      return;
+    }
+    this.satisfactionSort.set(sort);
+    this.satisfactionSortDescending.set(sort !== 'category');
+  }
+
+  satisfactionSortLabel(sort: 'category' | 'score' | 'responses'): string {
+    if (this.satisfactionSort() !== sort) {
+      return '';
+    }
+    return this.satisfactionSortDescending() ? 'desc' : 'asc';
   }
 
   createdCount(item: DailyVolume): number {

@@ -58,16 +58,32 @@
       @if (!satisfaction().length) {
         <p class="muted">No satisfaction data for this range.</p>
       } @else {
-        <div class="table">
-          @for (item of satisfaction(); track item.categoryId ?? item.categoryName) {
-            <div class="row satisfaction-row">
-              <span>{{ item.categoryName }}</span>
-              <div class="bar"><i [style.width]="satisfactionWidth(item)"></i></div>
-              <strong>{{ satisfactionScore(item) | number: '1.1-1' }}/5</strong>
-              <small>{{ satisfactionCount(item) }} responses</small>
-            </div>
-          }
-        </div>
+        <table class="satisfaction-table">
+          <thead>
+            <tr>
+              <th>
+                <button type="button" (click)="sortSatisfaction('category')">Category {{ satisfactionSortLabel('category') }}</button>
+              </th>
+              <th>Satisfaction</th>
+              <th>
+                <button type="button" (click)="sortSatisfaction('score')">Average {{ satisfactionSortLabel('score') }}</button>
+              </th>
+              <th>
+                <button type="button" (click)="sortSatisfaction('responses')">Responses {{ satisfactionSortLabel('responses') }}</button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of sortedSatisfaction(); track item.categoryId ?? item.categoryName) {
+              <tr>
+                <td>{{ item.categoryName }}</td>
+                <td><div class="bar"><i [style.width]="satisfactionWidth(item)"></i></div></td>
+                <td>{{ satisfactionScore(item) | number: '1.1-1' }}/5</td>
+                <td>{{ satisfactionCount(item) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
       }
     </section>
 

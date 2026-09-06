@@ -7,21 +7,66 @@
       }
     </div>
     <nav>
+      @if (canSeeReportProblem()) {
+        <a routerLink="/report-problem" routerLinkActive="active">Report a Problem</a>
+      }
+      @if (canSeeMyTickets()) {
+        <a routerLink="/tickets" routerLinkActive="active">My Tickets</a>
+      }
       @if (canSeeTicketQueue()) {
         <a routerLink="/agent/tickets" routerLinkActive="active">Ticket Queue</a>
-        <a routerLink="/agent/profile" routerLinkActive="active">Staff profile</a>
       }
       @if (canSeeTeam()) {
         <a routerLink="/agent/agents" routerLinkActive="active">Team</a>
-        <a routerLink="/reports" routerLinkActive="active">Reports</a>
       }
-      <a routerLink="/notifications" routerLinkActive="active">Notifications @if (unreadCount() > 0) { <span class="notification-badge">{{ unreadCount() }}</span> }</a>
-      <a routerLink="/chat" routerLinkActive="active">Chat @if (chatUnreadCount() > 0) { <span class="notification-badge">{{ chatUnreadCount() }}</span> }</a>
-      <a routerLink="/tickets" routerLinkActive="active">My tickets</a>
-      <a routerLink="/report-problem" routerLinkActive="active">Report a problem</a>
-      <a routerLink="/profile" routerLinkActive="active">My profile</a>
-      <a routerLink="/sessions" routerLinkActive="active">My sessions</a>
-      <a routerLink="/change-password" routerLinkActive="active">Change password</a>
+      @if (canSeeAdminLinks()) {
+        <a routerLink="/users" routerLinkActive="active">Users</a>
+        <a routerLink="/departments" routerLinkActive="active">Departments</a>
+      }
+      <div class="notification-menu">
+        <button type="button" class="bell-btn" aria-label="Notifications" (click)="toggleNotifications()">
+          <span aria-hidden="true">&#128276;</span>
+          @if (unreadCount() > 0) {
+            <span class="notification-badge">{{ unreadCount() }}</span>
+          }
+        </button>
+        @if (notificationPanelOpen()) {
+          <section class="notification-panel" aria-label="Notifications">
+            <header>
+              <strong>Notifications</strong>
+              <button type="button" [disabled]="markAllNotificationsPending() || unreadCount() === 0" (click)="markAllNotificationsRead()">Mark all read</button>
+            </header>
+            @if (notificationsError()) {
+              <p class="panel-error">{{ notificationsError() }}</p>
+            }
+            @if (notificationsLoading()) {
+              <p class="panel-muted">Loading notifications...</p>
+            } @else if (!notificationItems().length) {
+              <p class="panel-muted">No notifications.</p>
+            } @else {
+              <div class="notification-list">
+                @for (notification of notificationItems(); track notification.id) {
+                  <article [class.unread]="!notification.isRead">
+                    <div>
+                      <h2>{{ notification.title }}</h2>
+                      <p>{{ notification.body }}</p>
+                      <small>{{ notification.createdAt | date: 'short' }}</small>
+                    </div>
+                    <div class="notification-actions">
+                      @if (notification.ticketId) {
+                        <a [routerLink]="['/tickets', notification.ticketId]" (click)="notificationPanelOpen.set(false)">View ticket</a>
+                      }
+                      @if (!notification.isRead) {
+                        <button type="button" [disabled]="notificationPendingId() === notification.id" (click)="markNotificationRead(notification)">Mark read</button>
+                      }
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        }
+      </div>
       <button type="button" class="text-btn" (click)="logout()">Log out</button>
     </nav>
   </header>

@@ -19,15 +19,15 @@ import { TicketsComponent } from './tickets/tickets.component';
 import { AgentTicketsComponent } from './agent-tickets/agent-tickets.component';
 import { AgentDetailComponent } from './agents/agent-detail.component';
 import { AgentsComponent } from './agents/agents.component';
+import { CategoriesComponent } from './categories/categories.component';
+import { DepartmentsComponent } from './departments/departments.component';
 import { NotificationsComponent } from './notifications/notifications.component';
+import { UsersComponent } from './users/users.component';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   { path: 'report-problem', component: ReportProblemComponent, canMatch: [publicReportGuard] },
   { path: 'tickets/:id', component: TicketDetailComponent, canActivate: [authGuard] },
-  { path: 'agent/profile', component: AgentDetailComponent, canActivate: [authGuard, roleGuard], data: { roles: [UserType.Agent, UserType.Supervisor, UserType.Admin] } },
-  { path: 'agent/agents', component: AgentsComponent, canActivate: [authGuard, roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
-  { path: 'agent/agents/:id', component: AgentDetailComponent, canActivate: [authGuard, roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
   { path: 'login', component: LoginComponent, canActivate: [guestGuard] },
   { path: 'register', component: RegisterComponent, canActivate: [guestGuard] },
   { path: 'forgot-password', component: ForgotPasswordComponent, canActivate: [guestGuard] },
@@ -40,10 +40,18 @@ export const routes: Routes = [
       { path: 'tickets', component: TicketsComponent },
       { path: 'report-problem', component: ReportProblemComponent },
       { path: 'profile', component: ProfileComponent },
+      { path: 'categories', component: CategoriesComponent, canActivate: [roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
+      { path: 'agents', component: AgentsComponent, canActivate: [roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
+      { path: 'agents/:id', component: AgentDetailComponent, canActivate: [roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
+      { path: 'users', component: UsersComponent, canActivate: [roleGuard], data: { roles: [UserType.Admin] } },
+      { path: 'departments', component: DepartmentsComponent, canActivate: [roleGuard], data: { roles: [UserType.Admin] } },
       {
         path: 'agent',
         children: [
           { path: 'tickets', component: AgentTicketsComponent, canActivate: [roleGuard], data: { roles: [UserType.Agent, UserType.Supervisor, UserType.Admin] } },
+          { path: 'profile', component: AgentDetailComponent, canActivate: [roleGuard], data: { roles: [UserType.Agent, UserType.Supervisor, UserType.Admin] } },
+          { path: 'agents', component: AgentsComponent, canActivate: [roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
+          { path: 'agents/:id', component: AgentDetailComponent, canActivate: [roleGuard], data: { roles: [UserType.Supervisor, UserType.Admin] } },
         ],
       },
       { path: 'sessions', component: SessionsComponent },

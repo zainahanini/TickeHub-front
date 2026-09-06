@@ -13,7 +13,8 @@ export class NotificationService {
   readonly unreadCount$ = this.unreadCountSubject.asObservable();
 
   list(): Observable<AppNotification[]> {
-    return this.http.get<AppNotification[]>(this.base).pipe(
+    return this.http.get<unknown>(this.base).pipe(
+      map((response) => this.extractNotifications(response)),
       tap((items) => this.unreadCountSubject.next(items.filter((item) => !item.isRead).length)),
     );
   }
@@ -35,5 +36,37 @@ export class NotificationService {
     return this.http.post<void>(`${this.base}/read-all`, {}).pipe(
       tap(() => this.unreadCountSubject.next(0)),
     );
+  }
+
+  applyIncoming(notification: AppNotification): void {
+    const normalized = this.normalizeNotification(notification);
+    if (!normalized.isRead) {
+      this.unreadCountSubject.next(this.unreadCountSubject.value + 1);
+    }
+  }
+
+  private extractNotifications(response: unknown): AppNotification[] {
+    if (Array.isArray(response)) {
+      return response.map((item) => this.normalizeNotification(item));
+    }
+    if (response && typeof response === 'object') {
+      const data = response as Record<string, unknown>;
+      const items = data['items'] ?? data['data'] ?? data['notifications'];
+      return Array.isArray(items) ? items.map((item) => this.normalizeNotification(item)) : [];
+    }
+    return [];
+  }
+
+  private normalizeNotification(item: unknown): AppNotification {
+    const data = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+    return {
+      id: Number(data['id']),
+      userId: Number(data['userId'] ?? 0),
+      title: String(data['title'] ?? data['subject'] ?? 'Notification'),
+      body: String(data['body'] ?? data['message'] ?? data['description'] ?? ''),
+      isRead: Boolean(data['isRead'] ?? data['read'] ?? false),
+      createdAt: String(data['createdAt'] ?? data['createdDate'] ?? data['sentAt'] ?? ''),
+      ticketId: data['ticketId'] == null ? null : Number(data['ticketId']),
+    };
   }
 }
