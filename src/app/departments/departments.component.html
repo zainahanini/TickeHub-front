@@ -1,0 +1,55 @@
+<section class="panel">
+  <header>
+    <div>
+      <p class="eyebrow">Administration</p>
+      <h1>Departments</h1>
+      <p>Manage municipal departments used by ticket routing.</p>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="banner error">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="banner success">{{ message() }}</p>
+  }
+
+  <form class="create-form" #createForm="ngForm" (submit)="$event.preventDefault(); create()">
+    <label>
+      Department name
+      <input required maxlength="100" [(ngModel)]="createDraft.name" name="createName" />
+    </label>
+    <button type="submit" class="primary-action" [disabled]="createForm.invalid || pendingId() !== null">Create</button>
+  </form>
+
+  @if (loading()) {
+    <p class="muted">Loading departments...</p>
+  } @else if (!departments().length) {
+    <p class="muted">No departments found.</p>
+  } @else {
+    <div class="list">
+      @for (department of departments(); track department.id) {
+        <article class="row">
+          @if (editingId() === department.id) {
+            <form class="edit-form" #editForm="ngForm" (submit)="$event.preventDefault(); save(department)">
+              <label>
+                Department name
+                <input required maxlength="100" [(ngModel)]="editDraft.name" name="editName-{{ department.id }}" />
+              </label>
+              <div class="actions">
+                <button type="submit" [disabled]="editForm.invalid || pendingId() === department.id">Save</button>
+                <button type="button" (click)="editingId.set(null)">Cancel</button>
+              </div>
+            </form>
+          } @else {
+            <h2>{{ department.name }}</h2>
+            <div class="actions">
+              <button type="button" (click)="beginEdit(department)">Edit</button>
+              <button type="button" class="danger" [disabled]="pendingId() === department.id" (click)="remove(department)">Delete</button>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

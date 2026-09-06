@@ -1,0 +1,123 @@
+<section class="panel">
+  <header>
+    <div>
+      <p class="eyebrow">Administration</p>
+      <h1>Users</h1>
+      <p>Manage user accounts and access roles.</p>
+    </div>
+    <button type="button" class="primary-action" (click)="beginCreate()">New user</button>
+  </header>
+
+  @if (error()) {
+    <p class="banner error">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="banner success">{{ message() }}</p>
+  }
+
+  @if (creating()) {
+    <form class="form-panel" #createForm="ngForm" (submit)="$event.preventDefault(); create()">
+      <label>
+        Display name
+        <input required maxlength="120" [(ngModel)]="createDraft.displayName" name="createDisplayName" />
+      </label>
+      <label>
+        Email
+        <input type="email" required maxlength="254" [(ngModel)]="createDraft.email" name="createEmail" />
+      </label>
+      <label>
+        Phone
+        <input maxlength="30" [(ngModel)]="createDraft.phone" name="createPhone" />
+      </label>
+      <label>
+        Role
+        <select required [(ngModel)]="createDraft.userType" name="createUserType">
+          @for (role of roles; track role) {
+            <option [ngValue]="role">{{ role }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Department
+        <select [(ngModel)]="createDraft.departmentId" name="createDepartmentId">
+          <option [ngValue]="null">No department</option>
+          @for (department of departments(); track department.id) {
+            <option [ngValue]="department.id">{{ department.name }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Password
+        <input type="password" required minlength="8" [(ngModel)]="createDraft.password" name="createPassword" />
+      </label>
+      <div class="actions">
+        <button type="submit" [disabled]="createForm.invalid || pendingId() !== null">Create</button>
+        <button type="button" (click)="creating.set(false)">Cancel</button>
+      </div>
+    </form>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading users...</p>
+  } @else if (!users().length) {
+    <p class="muted">No users found.</p>
+  } @else {
+    <div class="list">
+      @for (user of users(); track user.id) {
+        <article class="row">
+          @if (editingId() === user.id) {
+            <form class="edit-form" #editForm="ngForm" (submit)="$event.preventDefault(); save(user)">
+              <label>
+                Display name
+                <input required maxlength="120" [(ngModel)]="editDraft.displayName" name="displayName-{{ user.id }}" />
+              </label>
+              <label>
+                Email
+                <input type="email" required maxlength="254" [(ngModel)]="editDraft.email" name="email-{{ user.id }}" />
+              </label>
+              <label>
+                Phone
+                <input maxlength="30" [(ngModel)]="editDraft.phone" name="phone-{{ user.id }}" />
+              </label>
+              <label>
+                Role
+                <select required [(ngModel)]="editDraft.userType" name="userType-{{ user.id }}">
+                  @for (role of roles; track role) {
+                    <option [ngValue]="role">{{ role }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Department
+                <select [(ngModel)]="editDraft.departmentId" name="department-{{ user.id }}">
+                  <option [ngValue]="null">No department</option>
+                  @for (department of departments(); track department.id) {
+                    <option [ngValue]="department.id">{{ department.name }}</option>
+                  }
+                </select>
+              </label>
+              <div class="actions">
+                <button type="submit" [disabled]="editForm.invalid || pendingId() === user.id">Save</button>
+                <button type="button" (click)="editingId.set(null)">Cancel</button>
+              </div>
+            </form>
+          } @else {
+            <div>
+              <h2>{{ userDisplayName(user) }}</h2>
+              <p>{{ user.email }}</p>
+            </div>
+            <dl>
+              <div><dt>Role</dt><dd>{{ userRole(user) }}</dd></div>
+              <div><dt>Department</dt><dd>{{ departmentName(user) }}</dd></div>
+              <div><dt>Phone</dt><dd>{{ user.phone || '-' }}</dd></div>
+            </dl>
+            <div class="actions">
+              <button type="button" (click)="beginEdit(user)">Edit</button>
+              <button type="button" class="danger" [disabled]="pendingId() === user.id" (click)="deactivate(user)">Deactivate</button>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>
