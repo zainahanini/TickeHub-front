@@ -15,6 +15,10 @@ import { CategoryService } from '../core/services/category.service';
 import { Category } from '../core/models';
 import { AgentService } from '../core/services/agent.service';
 import { ChatService } from '../core/services/chat.service';
+import { WorkflowService } from '../core/services/workflow.service';
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'txt', 'docx'];
 
 @Component({
   selector: 'app-ticket-detail',
@@ -34,6 +38,7 @@ export class TicketDetailComponent {
   private readonly categoriesService = inject(CategoryService);
   private readonly agentService = inject(AgentService);
   private readonly chatService = inject(ChatService);
+  private readonly workflowService = inject(WorkflowService);
 
   readonly isAuthenticated = !!this.currentUser.snapshot() || !!this.tokens.accessToken || !!this.tokens.refreshToken;
   readonly ticket = signal<Ticket | null>(null);
@@ -57,12 +62,16 @@ export class TicketDetailComponent {
   readonly ratingPending = signal(false);
   readonly priorities = Object.values(TicketPriority);
   readonly categories = signal<Category[]>([]);
-  readonly isStaff = this.currentUser.snapshot()?.userType === UserType.Agent || this.currentUser.snapshot()?.userType === UserType.Supervisor || this.currentUser.snapshot()?.userType === UserType.Admin;
-  readonly canAssign = this.currentUser.snapshot()?.userType === UserType.Supervisor || this.currentUser.snapshot()?.userType === UserType.Admin;
+  readonly isStaff = this.currentUser.hasRole(UserType.Agent, UserType.Supervisor, UserType.Admin);
+  readonly canAssign = this.currentUser.hasRole(UserType.Supervisor, UserType.Admin);
   readonly agents = signal<Agent[]>([]);
   readonly assignmentPending = signal(false);
   readonly chatPending = signal(false);
   readonly selectedAgentId = new FormControl<number | null>(null);
+  readonly selectedAttachment = signal<File | null>(null);
+  readonly attachmentDescription = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(200)] });
+  readonly attachmentUploadPending = signal(false);
+  readonly attachmentUploadProgress = signal<number | null>(null);
   readonly internalComment = new FormControl(false, { nonNullable: true });
   readonly editingTicket = signal(false);
   readonly editError = signal<string | null>(null);
@@ -78,9 +87,8 @@ export class TicketDetailComponent {
 
   constructor() {
     this.categoriesService.lookup().subscribe({ next: (categories) => this.categories.set(categories) });
-    if (this.canAssign) {
-      this.agentService.list().subscribe({ next: (agents) => this.agents.set(agents) });
-    }
+    this.workflowService.statuses().subscribe({ error: () => undefined });
+    this.workflowService.transitions().subscribe({ error: () => undefined });
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!Number.isInteger(id) || id <= 0) {
       this.loading.set(false);
@@ -88,45 +96,40 @@ export class TicketDetailComponent {
       return;
     }
 
-    this.tickets.getById(id).subscribe({
-      next: (ticket) => {
-        this.ticket.set(ticket);
-        this.workflowReason.reset('');
-        this.ticketNumber.set(ticket.ticketNumber ?? this.ticketNumber());
-        this.loading.set(false);
-      },
-      error: (error: unknown) => {
-        this.loading.set(false);
-        this.error.set(apiErrorMessage(error, 'The ticket details could not be loaded.'));
-      },
-    });
+    this.loadTicket(id);
     this.loadWorkflow(id);
     this.loadHistory(id);
     this.loadInteractions(id);
   }
 
   applyWorkflowAction(action: TicketWorkflowAction): void {
-    const targetStatus = action.toStatus ?? action.status;
-    if (!targetStatus || this.pendingAction()) {
+    const id = this.ticketId();
+    const targetStatus = action.toStatus ?? action.status ?? action.newStatus ?? action.targetStatus;
+    if (!id || action.canExecute === false || this.pendingAction()) {
       return;
     }
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    const actionKey = action.action ?? action.name ?? targetStatus;
-    if (action.reasonRequired && !this.workflowReason.value.trim()) {
+    const actionKey = this.workflowActionKey(action);
+    const reason = this.workflowReason.value.trim();
+    if (this.requiresReason(action) && !reason) {
       this.workflowReason.markAsTouched();
       return;
     }
+    if (this.isReopenAction(action)) {
+      this.reopenTicket(action);
+      return;
+    }
+    if (!targetStatus) {
+      return;
+    }
     this.pendingAction.set(actionKey);
-    this.tickets.updateStatus(id, { newStatus: targetStatus, reason: this.workflowReason.value.trim() || null, rowVersion: this.ticket()?.rowVersion }).subscribe({
-      next: (ticket) => {
-        this.ticket.set(ticket);
+    this.tickets.updateStatus(id, { newStatus: targetStatus, reason: reason || null, rowVersion: this.ticket()?.rowVersion }).subscribe({
+      next: () => {
         this.workflowReason.reset('');
-        this.loadWorkflow(id);
-        this.loadHistory(id);
+        this.refreshTicketWorkflowHistory(id);
         this.pendingAction.set(null);
       },
       error: (error: unknown) => {
-        this.editError.set(apiErrorMessage(error, 'Could not update ticket status.'));
+        this.editError.set(this.conflictMessage(error) ?? apiErrorMessage(error, 'Could not update ticket status.'));
         this.refreshAfterConflict(error);
         this.pendingAction.set(null);
       },
@@ -160,13 +163,18 @@ export class TicketDetailComponent {
     });
   }
 
-  reopenTicket(): void {
+  reopenTicket(action?: TicketWorkflowAction): void {
     const id = this.ticketId();
     if (!id || !this.ticket() || this.pendingAction()) return;
-    this.pendingAction.set('reopen');
-    this.tickets.reopen(id, this.workflowReason.value.trim() || undefined, this.ticket()?.rowVersion).subscribe({
-      next: (ticket) => { this.ticket.set(ticket); this.workflowReason.reset(''); this.loadWorkflow(id); this.loadHistory(id); this.pendingAction.set(null); },
-      error: (error: unknown) => { this.pendingAction.set(null); this.editError.set(apiErrorMessage(error, 'Could not reopen the ticket.')); this.refreshAfterConflict(error); },
+    const reason = this.workflowReason.value.trim();
+    if (action && this.requiresReason(action) && !reason) {
+      this.workflowReason.markAsTouched();
+      return;
+    }
+    this.pendingAction.set(action ? this.workflowActionKey(action) : 'reopen');
+    this.tickets.reopen(id, reason || undefined, this.ticket()?.rowVersion).subscribe({
+      next: () => { this.workflowReason.reset(''); this.refreshTicketWorkflowHistory(id); this.pendingAction.set(null); },
+      error: (error: unknown) => { this.pendingAction.set(null); this.editError.set(this.conflictMessage(error) ?? apiErrorMessage(error, 'Could not reopen the ticket.')); this.refreshAfterConflict(error); },
     });
   }
 
@@ -203,7 +211,7 @@ export class TicketDetailComponent {
 
   deleteAttachment(attachment: Attachment): void {
     const id = this.ticketId();
-    if (!id || !confirm('Delete this attachment?')) return;
+    if (!id || !this.isStaff || !confirm('Delete this attachment?')) return;
     this.attachmentsService.delete(id, attachment.id).subscribe({
       next: () => this.attachments.update((items) => items.filter((item) => item.id !== attachment.id)),
       error: (error: unknown) => this.interactionError.set(apiErrorMessage(error, 'Could not delete attachment.')),
@@ -213,11 +221,15 @@ export class TicketDetailComponent {
   assignTicket(): void {
     const id = this.ticketId();
     const agentId = this.selectedAgentId.value;
-    if (!id || !agentId || this.assignmentPending()) return;
+    if (!id || this.assignmentPending()) return;
     this.assignmentPending.set(true);
     this.tickets.assign(id, agentId).subscribe({
-      next: (ticket) => { this.ticket.set(ticket); this.assignmentPending.set(false); },
-      error: (error: unknown) => { this.assignmentPending.set(false); this.interactionError.set(apiErrorMessage(error, 'Could not assign this ticket.')); },
+      next: () => { this.refreshTicketWorkflow(id); this.assignmentPending.set(false); },
+      error: (error: unknown) => {
+        this.assignmentPending.set(false);
+        this.interactionError.set(this.conflictMessage(error) ?? apiErrorMessage(error, 'Could not assign this ticket.'));
+        this.refreshAfterConflict(error);
+      },
     });
   }
 
@@ -226,8 +238,63 @@ export class TicketDetailComponent {
     if (!id || this.assignmentPending()) return;
     this.assignmentPending.set(true);
     this.agentService.autoAssign(id).subscribe({
-      next: () => { this.assignmentPending.set(false); this.tickets.getById(id).subscribe((ticket) => this.ticket.set(ticket)); },
-      error: (error: unknown) => { this.assignmentPending.set(false); this.interactionError.set(apiErrorMessage(error, 'Could not auto-assign this ticket.')); },
+      next: () => { this.assignmentPending.set(false); this.refreshTicketWorkflow(id); },
+      error: (error: unknown) => {
+        this.assignmentPending.set(false);
+        this.interactionError.set(this.conflictMessage(error) ?? apiErrorMessage(error, 'Could not auto-assign this ticket.'));
+        this.refreshAfterConflict(error);
+      },
+    });
+  }
+
+  selectAttachment(event: Event): void {
+    this.interactionError.set(null);
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) {
+      this.selectedAttachment.set(null);
+      return;
+    }
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(extension)) {
+      this.interactionError.set('Allowed attachment types: jpg, jpeg, png, gif, webp, pdf, txt, docx.');
+      input.value = '';
+      this.selectedAttachment.set(null);
+      return;
+    }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      this.interactionError.set('Attachment must be 10 MB or smaller.');
+      input.value = '';
+      this.selectedAttachment.set(null);
+      return;
+    }
+    this.selectedAttachment.set(file);
+  }
+
+  uploadAttachment(): void {
+    const id = this.ticketId();
+    const file = this.selectedAttachment();
+    if (!id || !file || this.attachmentUploadPending()) return;
+    this.attachmentUploadPending.set(true);
+    this.attachmentUploadProgress.set(0);
+    this.interactionError.set(null);
+    this.attachmentsService.uploadWithProgress(id, file, this.attachmentDescription.value).subscribe({
+      next: (event) => {
+        if (event.state === 'progress') {
+          this.attachmentUploadProgress.set(event.progress);
+          return;
+        }
+        this.selectedAttachment.set(null);
+        this.attachmentDescription.reset('');
+        this.attachmentUploadPending.set(false);
+        this.attachmentUploadProgress.set(null);
+        this.loadAttachments(id);
+      },
+      error: (error: unknown) => {
+        this.interactionError.set(apiErrorMessage(error, 'Could not upload attachment.'));
+        this.attachmentUploadPending.set(false);
+        this.attachmentUploadProgress.set(null);
+      },
     });
   }
 
@@ -253,9 +320,25 @@ export class TicketDetailComponent {
     if (!id) return;
     this.ratingPending.set(true);
     this.tickets.rate(id, this.ratingScore.value as number, this.ratingComment.value.trim() || undefined).subscribe({
-      next: (rating) => { this.rating.set(rating); this.ratingPending.set(false); },
+      next: () => { this.ratingPending.set(false); this.loadRating(id); },
       error: (error: unknown) => { this.interactionError.set(apiErrorMessage(error, 'Could not submit rating.')); this.ratingPending.set(false); },
     });
+  }
+
+  canRateTicket(): boolean {
+    const ticket = this.ticket();
+    const user = this.currentUser.snapshot();
+    return !!ticket
+      && !!user
+      && this.currentUser.hasRole(UserType.Citizen)
+      && ticket.createdByUserId === user.id
+      && (ticket.status === 'Resolved' || ticket.status === 'Closed');
+  }
+
+  formatBytes(size: number): string {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   private ticketId(): number | null {
@@ -265,8 +348,8 @@ export class TicketDetailComponent {
 
   private loadInteractions(id: number): void {
     this.commentsService.getByTicket(id).subscribe({ next: (comments) => { this.comments.set(comments); this.commentsLoading.set(false); }, error: () => this.commentsLoading.set(false) });
-    this.attachmentsService.getByTicket(id).subscribe({ next: (attachments) => { this.attachments.set(attachments); this.attachmentsLoading.set(false); }, error: () => this.attachmentsLoading.set(false) });
-    this.tickets.getRating(id).subscribe({ next: (rating) => this.rating.set(rating) });
+    this.loadAttachments(id);
+    this.loadRating(id);
   }
 
   messageAgent(): void {
@@ -297,6 +380,82 @@ export class TicketDetailComponent {
     });
   }
 
+  private loadTicket(id: number): void {
+    this.tickets.getById(id).subscribe({
+      next: (ticket) => {
+        this.ticket.set(ticket);
+        this.workflowReason.reset('');
+        this.ticketNumber.set(ticket.ticketNumber ?? this.ticketNumber());
+        this.selectedAgentId.setValue(ticket.assignedAgentId ?? null, { emitEvent: false });
+        if (this.canAssign) {
+          this.loadAgentsForTicket(ticket);
+        }
+        this.loading.set(false);
+      },
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.error.set(apiErrorMessage(error, 'The ticket details could not be loaded.'));
+      },
+    });
+  }
+
+  private loadAgentsForTicket(ticket: Ticket): void {
+    this.agentService.list(ticket.departmentId).subscribe({
+      next: (agents) => this.agents.set(agents),
+      error: () => this.agents.set([]),
+    });
+  }
+
+  private loadAttachments(id: number): void {
+    this.attachmentsLoading.set(true);
+    this.attachmentsService.getByTicket(id).subscribe({
+      next: (attachments) => { this.attachments.set(attachments); this.attachmentsLoading.set(false); },
+      error: () => this.attachmentsLoading.set(false),
+    });
+  }
+
+  private loadRating(id: number): void {
+    this.tickets.getRating(id).subscribe({
+      next: (rating) => this.rating.set(rating),
+      error: (error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 404) {
+          this.rating.set(null);
+          return;
+        }
+        this.interactionError.set(apiErrorMessage(error, 'Could not load rating.'));
+      },
+    });
+  }
+
+  private refreshTicketWorkflow(id: number): void {
+    this.loadTicket(id);
+    this.loadWorkflow(id);
+  }
+
+  private refreshTicketWorkflowHistory(id: number): void {
+    this.refreshTicketWorkflow(id);
+    this.loadHistory(id);
+  }
+
+  private workflowActionKey(action: TicketWorkflowAction): string {
+    return action.action ?? action.name ?? action.label ?? action.toStatus ?? action.status ?? action.newStatus ?? action.targetStatus ?? 'workflow';
+  }
+
+  private requiresReason(action: TicketWorkflowAction): boolean {
+    return action.requiresReason === true || action.reasonRequired === true;
+  }
+
+  private isReopenAction(action: TicketWorkflowAction): boolean {
+    const key = `${action.action ?? ''} ${action.name ?? ''} ${action.label ?? ''}`.toLowerCase();
+    return key.includes('reopen');
+  }
+
+  private conflictMessage(error: unknown): string | null {
+    return error instanceof HttpErrorResponse && error.status === 409
+      ? 'Another user edited this ticket first. The latest ticket details have been reloaded.'
+      : null;
+  }
+
   private loadHistory(id: number): void {
     this.tickets.history(id).subscribe({
       next: (history) => this.history.set(history),
@@ -311,8 +470,6 @@ export class TicketDetailComponent {
     if (!id) {
       return;
     }
-    this.tickets.getById(id).subscribe({ next: (ticket) => this.ticket.set(ticket) });
-    this.loadWorkflow(id);
-    this.loadHistory(id);
+    this.refreshTicketWorkflowHistory(id);
   }
 }

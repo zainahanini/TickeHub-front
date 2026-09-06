@@ -5,12 +5,20 @@ import { BehaviorSubject, Observable, Subject, from } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
+  AppNotification,
   ChatConversation,
   ChatMessage,
   CreateConversationRequest,
   SendChatMessageRequest,
 } from '../models';
 import { TokenService } from './token.service';
+
+export interface TypingNotification {
+  conversationId: number;
+  userId?: number;
+  userName?: string;
+  displayName?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
@@ -20,9 +28,13 @@ export class ChatService {
   private connection: HubConnection | null = null;
   private startPromise: Promise<void> | null = null;
   private readonly incoming = new Subject<ChatMessage>();
+  private readonly incomingNotification = new Subject<AppNotification>();
+  private readonly typing = new Subject<TypingNotification>();
   private readonly unreadCountSubject = new BehaviorSubject(0);
 
   readonly messages$ = this.incoming.asObservable();
+  readonly notifications$ = this.incomingNotification.asObservable();
+  readonly typing$ = this.typing.asObservable();
   readonly unreadCount$ = this.unreadCountSubject.asObservable();
 
   conversations(): Observable<ChatConversation[]> {
@@ -33,11 +45,15 @@ export class ChatService {
   }
 
   createConversation(request: CreateConversationRequest = {}): Observable<ChatConversation> {
-    return this.http.post<ChatConversation>(`${this.base}/conversations`, request);
+    return this.http.post<unknown>(`${this.base}/conversations`, request).pipe(
+      map((response) => this.extractConversation(response)),
+    );
   }
 
   ticketConversation(ticketId: number): Observable<ChatConversation> {
-    return this.http.post<ChatConversation>(`${this.base}/tickets/${ticketId}/conversation`, {});
+    return this.http.post<unknown>(`${this.base}/tickets/${ticketId}/conversation`, {}).pipe(
+      map((response) => this.extractConversation(response)),
+    );
   }
 
   messages(conversationId: number): Observable<ChatMessage[]> {
@@ -49,7 +65,7 @@ export class ChatService {
   sendMessage(conversationId: number, body: string): Observable<ChatMessage | void> {
     const request: SendChatMessageRequest = { body };
     if (this.connection?.state === 'Connected') {
-      return from(this.connection.invoke<ChatMessage | void>('SendMessage', conversationId, body));
+      return from(this.connection.invoke<ChatMessage | void>('SendMessage', conversationId, request));
     }
     return this.http.post<ChatMessage>(`${this.base}/conversations/${conversationId}/messages`, request);
   }
@@ -62,6 +78,13 @@ export class ChatService {
     return this.http.post<void>(`${this.base}/conversations/${conversationId}/read`, {}).pipe(
       tap(() => this.refreshUnreadCount()),
     );
+  }
+
+  userTyping(conversationId: number): void {
+    if (this.connection?.state !== 'Connected') {
+      return;
+    }
+    void this.connection.invoke('UserTyping', conversationId).catch(() => undefined);
   }
 
   async connect(): Promise<void> {
@@ -87,6 +110,16 @@ export class ChatService {
       this.connection.on('ReceiveMessage', (message: ChatMessage) => {
         this.incoming.next(message);
       });
+      this.connection.on('ReceiveNotification', (notification: AppNotification) => {
+        this.incomingNotification.next(notification);
+      });
+      this.connection.on('UserTyping', (typing: TypingNotification | number, userName?: string) => {
+        if (typeof typing === 'number') {
+          this.typing.next({ conversationId: typing, userName });
+          return;
+        }
+        this.typing.next(typing);
+      });
     }
 
     this.startPromise = this.connection.start().finally(() => {
@@ -101,6 +134,8 @@ export class ChatService {
       return;
     }
     this.connection.off('ReceiveMessage');
+    this.connection.off('ReceiveNotification');
+    this.connection.off('UserTyping');
     await this.connection.stop();
     this.connection = null;
     this.startPromise = null;
@@ -126,6 +161,18 @@ export class ChatService {
       return Array.isArray(items) ? items as ChatConversation[] : [];
     }
     return [];
+  }
+
+  private extractConversation(response: unknown): ChatConversation {
+    if (response && typeof response === 'object') {
+      const data = response as Record<string, unknown>;
+      const conversation = data['conversation'] ?? data['item'] ?? data['data'];
+      if (conversation && typeof conversation === 'object') {
+        return conversation as ChatConversation;
+      }
+      return data as unknown as ChatConversation;
+    }
+    return { id: Number(response) };
   }
 
   private extractMessages(response: unknown): ChatMessage[] {

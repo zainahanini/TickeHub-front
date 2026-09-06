@@ -22,11 +22,9 @@
         <h2>Assignment</h2>
         <div class="assignment-row">
           <select [formControl]="selectedAgentId" aria-label="Assign agent">
-            <option [ngValue]="null">Select an active agent</option>
+            <option [ngValue]="null">Unassigned</option>
             @for (agent of agents(); track agent.id) {
-              @if (agent.departmentId === assignableTicket.departmentId && agent.isAvailable && (agent.capacity === undefined || agent.openTicketCount === undefined || agent.openTicketCount < agent.capacity)) {
-                <option [ngValue]="agent.id">{{ agent.firstName }} {{ agent.lastName }}{{ agent.openTicketCount !== undefined && agent.capacity !== undefined ? ' (' + agent.openTicketCount + '/' + agent.capacity + ')' : '' }}</option>
-              }
+              <option [ngValue]="agent.id">{{ agent.firstName }} {{ agent.lastName }}{{ agent.openTicketCount !== undefined && agent.capacity !== undefined ? ' (' + agent.openTicketCount + '/' + agent.capacity + ')' : '' }}</option>
             }
           </select>
           <button type="button" class="secondary-btn" [disabled]="assignmentPending()" (click)="assignTicket()">{{ assignmentPending() ? 'Assigning...' : 'Assign' }}</button>
@@ -39,9 +37,6 @@
       @if (!editingTicket()) {
         <div class="staff-actions">
           <button type="button" class="secondary-btn" (click)="beginTicketEdit()">Edit ticket</button>
-          @if (editableTicket.status === 'Resolved' || editableTicket.status === 'Closed') {
-            <button type="button" class="secondary-btn" (click)="reopenTicket()" [disabled]="pendingAction()">{{ pendingAction() === 'reopen' ? 'Reopening...' : 'Reopen ticket' }}</button>
-          }
         </div>
       } @else {
         <form class="edit-form" (submit)="$event.preventDefault(); saveTicket()">
@@ -77,7 +72,25 @@
     }
 
     @if (!workflowLoading() && workflow().length) {
-      <section class="workflow"><h2>Available actions</h2>@if (workflow().some((action) => action.reasonRequired)) { <label class="field"><span>Reason</span><textarea [formControl]="workflowReason" maxlength="1000" rows="2"></textarea></label> }<div class="workflow-actions">@for (action of workflow(); track action.action || action.name || action.status) { <button type="button" [disabled]="!action.toStatus && !action.status || pendingAction()" (click)="applyWorkflowAction(action)">{{ pendingAction() === (action.action || action.name || action.toStatus || action.status) ? 'Updating...' : (action.label || action.name || action.action || action.toStatus || action.status) }}</button> }</div></section>
+      <section class="workflow">
+        <h2>Workflow actions</h2>
+        @if (workflow().some((action) => action.requiresReason || action.reasonRequired)) {
+          <label class="field">
+            <span>Reason</span>
+            <textarea [formControl]="workflowReason" maxlength="1000" rows="2"></textarea>
+          </label>
+          @if (workflowReason.touched && !workflowReason.value.trim()) {
+            <p class="field-error">A reason is required for this action.</p>
+          }
+        }
+        <div class="workflow-actions">
+          @for (action of workflow(); track action.action || action.name || action.label || action.toStatus || action.status) {
+            <button type="button" [disabled]="action.canExecute === false || pendingAction()" (click)="applyWorkflowAction(action)">
+              {{ pendingAction() === (action.action || action.name || action.label || action.toStatus || action.status) ? 'Updating...' : (action.label || action.name || action.action || action.toStatus || action.status) }}
+            </button>
+          }
+        </div>
+      </section>
     }
     @if (history().length) {
       <section class="history"><h2>History</h2><ol>@for (entry of history(); track entry.id || entry.createdAt) { <li><strong>{{ entry.action || entry.fromStatus + ' to ' + entry.toStatus }}</strong><span>{{ entry.description || entry.changedByName || '' }}</span><time>{{ entry.createdAt | date: 'medium' }}</time></li> }</ol></section>
@@ -102,10 +115,30 @@
         <h2>Attachments</h2>
         @if (attachmentsLoading()) { <p class="status-message">Loading attachments...</p> }
         @else if (attachments().length === 0) { <p class="status-message">No attachments.</p> }
-        @else { <ul class="attachment-list">@for (attachment of attachments(); track attachment.id) { <li><span><strong>{{ attachment.fileName }}</strong><small>{{ attachment.description || 'Attachment' }}</small></span><span class="inline-actions"><button type="button" class="secondary-btn" (click)="downloadAttachment(attachment)">Download</button>@if (isStaff) { <button type="button" class="secondary-btn danger" (click)="deleteAttachment(attachment)">Delete</button> }</span></li> }</ul> }
+        @else { <ul class="attachment-list">@for (attachment of attachments(); track attachment.id) { <li><span><strong>{{ attachment.fileName }}</strong><small>{{ formatBytes(attachment.sizeBytes) }}{{ attachment.description ? ' - ' + attachment.description : '' }}</small></span><span class="inline-actions"><button type="button" class="secondary-btn" (click)="downloadAttachment(attachment)">Download</button>@if (isStaff) { <button type="button" class="secondary-btn danger" (click)="deleteAttachment(attachment)">Delete</button> }</span></li> }</ul> }
+
+        <div class="upload-form">
+          <label class="field">
+            <span>Upload attachment</span>
+            <input type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.docx" (change)="selectAttachment($event)" [disabled]="attachmentUploadPending()" />
+          </label>
+          <label class="field">
+            <span>Description <em>(optional)</em></span>
+            <input type="text" [formControl]="attachmentDescription" maxlength="200" />
+          </label>
+          @if (selectedAttachment(); as file) {
+            <p class="status-message">{{ file.name }} - {{ formatBytes(file.size) }}</p>
+          }
+          @if (attachmentUploadProgress() !== null) {
+            <progress max="100" [value]="attachmentUploadProgress()"></progress>
+          }
+          <button type="button" class="primary-btn" [disabled]="!selectedAttachment() || attachmentUploadPending()" (click)="uploadAttachment()">
+            {{ attachmentUploadPending() ? 'Uploading...' : 'Upload attachment' }}
+          </button>
+        </div>
       </section>
 
-      @if (ticket()?.status === 'Resolved' || ticket()?.status === 'Closed') {
+      @if (rating() || canRateTicket()) {
         <section class="interaction-section rating-section">
           <h2>Rate this service</h2>
           @if (rating(); as existingRating) { <p class="status-message">You rated this ticket {{ existingRating.score }} out of 5.</p> }

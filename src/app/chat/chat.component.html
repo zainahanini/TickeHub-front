@@ -73,7 +73,10 @@
       </div>
 
       <form class="message-form" (submit)="$event.preventDefault(); send()">
-        <textarea [formControl]="messageBody" maxlength="2000" rows="3" placeholder="Write a message"></textarea>
+        @if (typingName()) {
+          <p class="typing-indicator">{{ typingName() }} is typing...</p>
+        }
+        <textarea [formControl]="messageBody" maxlength="2000" rows="3" placeholder="Write a message" (input)="notifyTyping()"></textarea>
         <button type="submit" [disabled]="sending()">{{ sending() ? 'Sending...' : 'Send' }}</button>
       </form>
     } @else {

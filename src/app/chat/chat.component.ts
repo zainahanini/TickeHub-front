@@ -3,9 +3,10 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subject, debounceTime } from 'rxjs';
 import { apiErrorMessage } from '../core/api-error';
 import { ChatConversation, ChatMessage } from '../core/models';
-import { ChatService } from '../core/services/chat.service';
+import { ChatService, TypingNotification } from '../core/services/chat.service';
 import { CurrentUserService } from '../core/services/current-user.service';
 
 @Component({
@@ -38,9 +39,11 @@ export class ChatComponent {
     nonNullable: true,
     validators: [Validators.maxLength(160)],
   });
+  readonly typingName = signal<string | null>(null);
+  private readonly typingInput = new Subject<void>();
+  private typingTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    void this.chat.connect();
     this.loadConversations();
 
     this.route.paramMap
@@ -58,6 +61,19 @@ export class ChatComponent {
     this.chat.messages$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((message) => this.handleIncomingMessage(message));
+
+    this.chat.typing$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((typing) => this.handleTyping(typing));
+
+    this.typingInput
+      .pipe(debounceTime(700), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const active = this.activeConversation();
+        if (active) {
+          this.chat.userTyping(active.id);
+        }
+      });
   }
 
   createConversation(): void {
@@ -105,6 +121,12 @@ export class ChatComponent {
         this.sending.set(false);
       },
     });
+  }
+
+  notifyTyping(): void {
+    if (this.activeConversation()) {
+      this.typingInput.next();
+    }
   }
 
   title(conversation: ChatConversation): string {
@@ -197,6 +219,20 @@ export class ChatComponent {
         ? { ...item, unreadCount: Number(item.unreadCount ?? 0) + 1, lastMessagePreview: message.body, lastMessageAt: message.sentAt }
         : item));
     }
+  }
+
+  private handleTyping(typing: TypingNotification): void {
+    const active = this.activeConversation();
+    const user = this.currentUser.snapshot();
+    if (!active || typing.conversationId !== active.id || typing.userId === user?.id) {
+      return;
+    }
+
+    this.typingName.set(typing.userName ?? typing.displayName ?? 'Someone');
+    if (this.typingTimer) {
+      clearTimeout(this.typingTimer);
+    }
+    this.typingTimer = setTimeout(() => this.typingName.set(null), 2500);
   }
 
   private appendMessage(message: ChatMessage): void {
