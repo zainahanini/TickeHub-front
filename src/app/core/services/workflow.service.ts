@@ -1,31 +1,28 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { shareReplay } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { Workflow } from '../models';
+import { WorkflowStatus, WorkflowTransition } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class WorkflowService {
   private readonly http = inject(HttpClient);
-  private readonly base = `${environment.apiBaseUrl}/workflows`;
+  private readonly base = `${environment.apiBaseUrl}/workflow`;
+  private statuses$?: Observable<WorkflowStatus[]>;
+  private transitions$?: Observable<WorkflowTransition[]>;
 
-  list(): Observable<Workflow[]> {
-    return this.http.get<Workflow[]>(this.base);
+  statuses(): Observable<WorkflowStatus[]> {
+    if (!this.statuses$) {
+      this.statuses$ = this.http.get<WorkflowStatus[]>(`${this.base}/statuses`).pipe(shareReplay(1));
+    }
+    return this.statuses$;
   }
 
-  getById(id: number): Observable<Workflow> {
-    return this.http.get<Workflow>(`${this.base}/${id}`);
-  }
-
-  create(workflow: Partial<Workflow>): Observable<Workflow> {
-    return this.http.post<Workflow>(this.base, workflow);
-  }
-
-  update(id: number, workflow: Partial<Workflow>): Observable<Workflow> {
-    return this.http.put<Workflow>(`${this.base}/${id}`, workflow);
-  }
-
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.base}/${id}`);
+  transitions(): Observable<WorkflowTransition[]> {
+    if (!this.transitions$) {
+      this.transitions$ = this.http.get<WorkflowTransition[]>(`${this.base}/transitions`).pipe(shareReplay(1));
+    }
+    return this.transitions$;
   }
 }

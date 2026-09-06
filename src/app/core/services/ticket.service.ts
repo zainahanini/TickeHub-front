@@ -82,7 +82,7 @@ export class TicketService {
     return this.http.post<Ticket>(`${this.base}/${id}/reopen`, { reason, rowVersion });
   }
 
-  assign(id: number, agentId: number): Observable<Ticket> {
+  assign(id: number, agentId: number | null): Observable<Ticket> {
     return this.http.patch<Ticket>(`${this.base}/${id}/assign`, { agentId });
   }
 
@@ -112,6 +112,9 @@ export class TicketService {
     const totalCount = Number(data['totalCount'] ?? data['TotalCount'] ?? items.length);
     const page = Number(data['page'] ?? data['Page'] ?? 1);
     const pageSize = Number((data['pageSize'] ?? data['PageSize'] ?? items.length) || 10);
-    return { items, totalCount, page, pageSize };
+    const totalPages = Number(data['totalPages'] ?? data['TotalPages'] ?? Math.max(1, Math.ceil(totalCount / pageSize)));
+    const hasPrevious = Boolean(data['hasPrevious'] ?? data['HasPrevious'] ?? page > 1);
+    const hasNext = Boolean(data['hasNext'] ?? data['HasNext'] ?? page < totalPages);
+    return { items, totalCount, page, pageSize, totalPages, hasPrevious, hasNext };
   }
 }
